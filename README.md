@@ -1,82 +1,46 @@
-# ⚡ Real-Time Bidding & Fraud Detection Platform
+# 🛡️ Sentinel Service (AI Security Monitor)
 
-This is a live auction platform that uses AI to catch fraudulent bids in real time. It is built with Spring Boot and Redis to handle fast, continuous data streams, instantly blocking bots without slowing down the user experience.
+*Note: This is a microservice within the larger **[Real-Time Bidding & Fraud Detection Platform](https://github.com/walker-systems/auction-system)**. For the full system architecture and Docker orchestration, please visit the main repository.*
 
+This is the background security engine of the auction platform. It silently monitors the live stream of bids and uses AI to identify and block fraudulent bot activity in real time.
 
+## 🧠 Component Context
 
-## 🏗️ How It Works
+Instead of hardcoding hundreds of rules to catch bad actors, the Sentinel Service uses **Spring AI**. 
 
-* **Bidding Engine:** The main storefront. Built with Spring Boot WebFlux (Java 25) and Server-Sent Events (SSE) to update the UI instantly without refreshing the page.
-* **Message Broker:** Redis Pub/Sub handles the real-time communication between the different services.
-* **Sentinel Service:** The security monitor. It uses Spring AI to watch the live bid stream and block suspicious bot activity.
+It subscribes to the Redis message broker and listens for every new bid. It then evaluates the context of the bid (the user's behavior, timing, and persona) to determine if it is a legitimate human or an automated bot. If it detects a bot, it instantly fires a rollback event back into Redis to reverse the transaction on the live storefront.
+
+### ⚡ Concurrency Control (Lua Scripting)
+In a live auction, multiple users (or a swarm of bots) might try to bid on the exact same item at the exact same millisecond. To prevent race conditions—where a delayed bid might accidentally overwrite a higher one due to network latency—this system manages state using **Atomic Lua Scripts** inside Redis. 
+
+Instead of checking the current price and *then* saving the new bid (which leaves a split-second gap for data corruption), the custom Lua script executes both actions in a single, uninterruptible motion. This guarantees absolute data consistency even under extreme traffic.
+
+**Key Technologies:** Java 25, Spring Boot WebFlux, Spring AI, Redis Pub/Sub, Redis Lua Scripting.
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 How to Run (Standalone)
 
-Follow these steps to run the platform locally on your machine.
+*To run the full platform including the Storefront and Database, use the `docker-compose.yml` in the [main repository](https://github.com/walker-systems/auction-system).*
 
-### Prerequisites
-* **Docker** (must be running in the background)
-* **Java 25+**
-* **OpenAI API Key** (needed for the Sentinel to analyze bids)
+If you want to run just the Sentinel locally (requires a running Redis instance on port 6379):
 
-### 1. Get the Code
 ```bash
-git clone https://github.com/walker-systems/auction-system.git
-cd auction-system
-```
+# 1. Navigate to this directory
+cd sentinel-service
 
-### 2. Start the Database
-```bash
-docker compose up -d
-```
-
-### 3. Start the Bidding Engine
-Open a terminal in the root folder and run:
-```bash
-cd bidding-engine
-./mvnw spring-boot:run
-```
-
-### 4. Start the AI Sentinel
-Open a **new terminal window**, set your API key, and run the service:
-```bash
-cd auction-system/sentinel-service
+# 2. Export your OpenAI API key (Required for the AI to analyze bids)
 export SPRING_AI_OPENAI_API_KEY='sk-your-actual-key-here'
+
+# 3. Start the application
 ./mvnw spring-boot:run
 ```
 
-### 5. Open the Storefront
-Go to **`http://localhost:8080`** in your browser.
-* Click **"Start Chaos"** to unleash the demo bots.
-* Watch the AI intercept and reverse fake bids in real time.
-
 ---
 
-## 🛑 How to Stop It
+## 📬 Let's Connect
 
-When you are done testing, you can easily clean up your environment:
-
-1. **Stop the Apps:** Press `Ctrl + C` in both terminal windows (or simply close the tabs).
-2. **Stop the Database:** Run this command in the root folder to shut down Redis safely:
-   ```bash
-   docker compose down
-   ```
-
----
-
-## 🛠️ Troubleshooting
-
-* **Port 8080 or 8081 is in use:** If the apps fail to start, another background process might be using their ports. Find and kill the process:
-  ```bash
-  lsof -i :8080
-  kill -9 <PID>
-  ```
-* **Maven Wrapper (`./mvnw`) fails:** If hidden `.mvn` folders were lost during the download, regenerate the wrapper using your system's global Maven installation:
-  ```bash
-  mvn wrapper:wrapper
-  ```
-* **App crashes immediately:** Make sure you exported the `SPRING_AI_OPENAI_API_KEY` in the exact same terminal window where you are running the Sentinel service.
-
----
+**Justin Walker**
+* 📧 **Email:** [justinwalker.contact@gmail.com](mailto:justinwalker.contact@gmail.com)
+* 💼 **LinkedIn:** [Justin Walker](https://www.linkedin.com/in/justin-walker-0403923b1/)
+* 🌐 **Portfolio:** [justin-castillo.github.io](https://justin-castillo.github.io/)
