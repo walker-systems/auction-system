@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reactive Bidding Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8 font-sans">
+
+<div class="max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Live Storefront</h1>
+            <p class="text-gray-600">Powered by Spring WebFlux & Redis</p>
+        </div>
+        <div class="space-x-4">
+            <button id="chaos-btn" onclick="toggleChaos()" class="w-48 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform hover:-translate-y-1">
+                🤖 Start Chaos
+            </button>
+            <button onclick="resetSystem()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform hover:-translate-y-1">
+                🔄 Reset System
+            </button>
+        </div>
+    </div>
+
+    <div id="chaos-banner" class="hidden bg-indigo-100 border-l-4 border-indigo-500 text-indigo-700 p-4 mb-8 rounded shadow-sm transition-all duration-500">
+        <p class="font-bold text-lg">🤖 Demo Swarm Active!</p>
+        <p>The bot network is currently flooding the storefront. Jump in, spam the bid button, and see if you can outsmart the AI Sentinel before the timers run out!</p>
+    </div>
+
+    <div id="auction-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    </div>
+</div>
+
+<script>
+    const activeAuctions = {};
+    let clockInterval;
+    let isChaosRunning = false;
+
+    const toastTimers = {};
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadStorefront();
+    });
+
+    function loadStorefront() {
+        fetch('/api/auctions')
+            .then(response => response.json())
+            .then(auctions => {
+                const grid = document.getElementById('auction-grid');
+                grid.innerHTML = '';
+
+                auctions.forEach(auction => {
+                    createAuctionCard(auction, grid);
+
+                    let endMs = new Date(auction.endsAt).getTime();
+                    if (isNaN(endMs)) endMs = parseFloat(auction.endsAt) * 1000;
+
+                    activeAuctions[auction.id] = {
+                        endsAt: endMs,
+                        currentPrice: auction.currentPrice,
+                        timerEl: document.getElementById(`timer-${auction.id}`),
+                        btnEl: document.getElementById(`btn-${auction.id}`)
+                    };
+
+                    connectToLiveStream(auction.id);
+                });
+
+                if (clockInterval) clearInterval(clockInterval);
+                updateClocks();
+                clockInterval = setInterval(updateClocks, 1000);
+            })
+            .catch(err => console.error("Error fetching storefront:", err));
+    }
+
+    // Toggle Button Logic
+    function toggleChaos() {
+        const btn = document.getElementById('chaos-btn');
+        const banner = document.getElementById('chaos-banner');
+
+        if (!isChaosRunning) {
+            fetch('/api/admin/start-bots', { method: 'POST' });
+            isChaosRunning = true;
+            btn.innerHTML = '🛑 Stop Chaos';
+            btn.classList.replace('bg-purple-600', 'bg-red-600');
+            btn.classList.replace('hover:bg-purple-700', 'hover:bg-red-700');
+            banner.classList.remove('hidden');
+        } else {
+            fetch('/api/admin/stop-bots', { method: 'POST' });
+            isChaosRunning = false;
+            btn.innerHTML = '🤖 Start Chaos';
+            btn.classList.replace('bg-red-600', 'bg-purple-600');
+            btn.classList.replace('hover:bg-red-700', 'hover:bg-purple-700');
+            banner.classList.add('hidden');
+        }
+    }
+
+    function resetSystem() {
+        fetch('/api/admin/reset', { method: 'POST' }).then(() => {
+            setTimeout(() => window.location.reload(), 1000);
+        });
+    }
+
+    function createAuctionCard(auction, container) {
+        const card = document.createElement('div');
+        card.className = "relative overflow-hidden bg-white p-6 rounded-xl shadow-md border border-gray-200 transition-all duration-500 transform flex flex-col";
+        card.id = `card-${auction.id}`;
+
+        card.innerHTML = `
+            <div class="flex-grow z-10 relative">
+                <h2 class="text-xl font-bold text-gray-800 mb-2">${auction.itemId}</h2>
+                <div class="text-3xl font-black text-green-500 transition-all duration-500 opacity-100 mb-2" id="price-${auction.id}">
+                    $${auction.currentPrice.toFixed(2)}
+                </div>
+                <div id="timer-${auction.id}" class="text-sm font-bold text-gray-600 mb-4 transition-colors duration-500">
+                    Time Left: Loading...
+                </div>
+                <p class="text-sm text-gray-500 mb-4">
+                    Highest Bidder: <span id="bidder-${auction.id}" class="font-semibold text-gray-700 transition-all duration-500 opacity-100">${auction.highBidder}</span>
+                </p>
+            </div>
+
+            <div class="flex space-x-2 mt-auto z-10 relative">
+                <input type="text" id="username-${auction.id}" placeholder="Username" class="w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="demo_user">
+                <input type="number" id="bid-amount-${auction.id}" placeholder="$$$" class="w-1/4 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="${auction.currentPrice + 10}">
+                <button id="btn-${auction.id}" onclick="placeBid('${auction.id}')" class="w-1/4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition active:scale-95">
+                    Bid
+                </button>
+            </div>
+
+            <div id="toast-area-${auction.id}" class="absolute top-0 left-0 w-full h-full pointer-events-none flex flex-col items-center justify-center z-20"></div>
+        `;
+        container.appendChild(card);
+    }
+
+    function connectToLiveStream(auctionId) {
+        const eventSource = new EventSource(`/api/auctions/${auctionId}/stream`);
+
+        eventSource.onmessage = function(event) {
+            const updatedAuction = JSON.parse(event.data);
+            const auctionState = activeAuctions[updatedAuction.id];
+
+            const cardElement = document.getElementById(`card-${auctionId}`);
+            const priceElement = document.getElementById(`price-${auctionId}`);
+            const bidderElement = document.getElementById(`bidder-${auctionId}`);
+
+            const userElement = document.getElementById(`username-${auctionId}`);
+            const currentUser = userElement ? userElement.value.trim() : "";
+
+            if (!auctionState || !priceElement || !bidderElement) return;
+
+            // Halo Logic
+            if (cardElement) {
+                if (updatedAuction.highBidder === currentUser && currentUser !== "") {
+                    cardElement.classList.add('ring-4', 'ring-yellow-400', 'border-transparent');
+                } else {
+                    cardElement.classList.remove('ring-4', 'ring-yellow-400', 'border-transparent');
+                }
+            }
+
+            let endMs = new Date(updatedAuction.endsAt).getTime();
+            if (isNaN(endMs)) endMs = parseFloat(updatedAuction.endsAt) * 1000;
+            auctionState.endsAt = endMs;
+
+            // Detect Rollback
+            if (updatedAuction.currentPrice < auctionState.currentPrice) {
+                showCardToast(auctionId, `Bid Rejected!`, "bg-red-600");
+
+                const bidInput = document.getElementById(`bid-amount-${auctionId}`);
+                if (bidInput) bidInput.value = updatedAuction.currentPrice + 10;
+
+                priceElement.classList.add('opacity-0');
+                bidderElement.classList.add('opacity-0');
+
+                setTimeout(() => {
+                    priceElement.innerText = `$${updatedAuction.currentPrice.toFixed(2)}`;
+                    priceElement.classList.remove('text-green-500');
+                    priceElement.classList.add('text-red-600');
+                    priceElement.classList.remove('opacity-0');
+
+                    bidderElement.innerText = updatedAuction.highBidder;
+                    bidderElement.classList.remove('text-gray-700');
+                    bidderElement.classList.add('text-red-600');
+                    bidderElement.classList.remove('opacity-0');
+
+                    setTimeout(() => {
+                        priceElement.classList.add('opacity-0');
+                        bidderElement.classList.add('opacity-0');
+
+                        setTimeout(() => {
+                            priceElement.classList.remove('text-red-600');
+                            priceElement.classList.add('text-green-500');
+                            priceElement.classList.remove('opacity-0');
+
+                            bidderElement.classList.remove('text-red-600');
+                            bidderElement.classList.add('text-gray-700');
+                            bidderElement.classList.remove('opacity-0');
+                        }, 400);
+                    }, 2000);
+                }, 400);
+
+            }
+            // Normal Update
+            else if (updatedAuction.currentPrice > auctionState.currentPrice) {
+                if (updatedAuction.highBidder !== "System") {
+                    const bidInput = document.getElementById(`bid-amount-${auctionId}`);
+                    if(bidInput) bidInput.value = updatedAuction.currentPrice + 10;
+                }
+
+                priceElement.classList.add('opacity-0');
+                bidderElement.classList.add('opacity-0');
+
+                setTimeout(() => {
+                    priceElement.innerText = `$${updatedAuction.currentPrice.toFixed(2)}`;
+                    bidderElement.innerText = updatedAuction.highBidder;
+
+                    priceElement.classList.remove('opacity-0');
+                    bidderElement.classList.remove('opacity-0');
+                }, 400);
+            }
+
+            auctionState.currentPrice = updatedAuction.currentPrice;
+        };
+    }
+
+    function placeBid(auctionId) {
+        const username = document.getElementById(`username-${auctionId}`).value;
+        const amount = document.getElementById(`bid-amount-${auctionId}`).value;
+
+        fetch(`/api/auctions/${auctionId}/bids`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bidder: username, amount: amount })
+        })
+            .then(async response => {
+                if (!response.ok) {
+                    showCardToast(auctionId, "Bid Error!", "bg-red-600");
+                } else {
+                    showCardToast(auctionId, "Bid Accepted!", "bg-green-600");
+                }
+            })
+            .catch(err => {
+                showCardToast(auctionId, "Network Error", "bg-red-600");
+            });
+    }
+
+    function updateClocks() {
+        const now = Date.now();
+
+        for (const [id, data] of Object.entries(activeAuctions)) {
+            const { endsAt, timerEl, btnEl } = data;
+            if (!timerEl) continue;
+
+            const diff = endsAt - now;
+
+            if (diff <= 0) {
+                timerEl.innerText = "SOLD!";
+                timerEl.className = "text-xl font-black text-red-600 mb-4 tracking-widest transition-all duration-500";
+
+                if (btnEl && !btnEl.disabled) {
+                    btnEl.disabled = true;
+                    btnEl.innerText = "Closed";
+                    btnEl.className = "w-1/4 bg-gray-400 text-white font-bold py-2 px-4 rounded-lg cursor-not-allowed transition-all duration-500";
+
+                    document.getElementById(`username-${id}`).disabled = true;
+                    document.getElementById(`username-${id}`).className = "w-1/2 px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed";
+
+                    document.getElementById(`bid-amount-${id}`).disabled = true;
+                    document.getElementById(`bid-amount-${id}`).className = "w-1/4 px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed";
+
+                    const cardElement = document.getElementById(`card-${id}`);
+                    if(cardElement) cardElement.classList.remove('ring-4', 'ring-yellow-400', 'border-transparent');
+                }
+                delete activeAuctions[id];
+            } else {
+                const seconds = Math.floor((diff / 1000) % 60);
+                const minutes = Math.floor((diff / 1000 / 60) % 60);
+
+                if (diff < 15000) {
+                    timerEl.innerText = `⏳ Closing soon: 0${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    timerEl.classList.add("text-red-500");
+                } else {
+                    timerEl.innerText = `Time Left: 0${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    timerEl.classList.remove("text-red-500");
+                }
+            }
+        }
+    }
+
+    function showCardToast(auctionId, message, colorClass) {
+        const area = document.getElementById(`toast-area-${auctionId}`);
+        if (!area) return;
+
+        if (toastTimers[auctionId]) {
+            clearTimeout(toastTimers[auctionId].fadeTimer);
+            clearTimeout(toastTimers[auctionId].removeTimer);
+        } else {
+            toastTimers[auctionId] = {};
+        }
+
+        let toast = area.querySelector('.custom-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            area.appendChild(toast);
+        }
+
+        toast.className = `custom-toast ${colorClass} text-white px-6 py-2 rounded-full shadow-2xl transform transition-all duration-300 scale-100 opacity-100 mb-2 font-bold absolute`;
+        toast.innerText = message;
+
+        void toast.offsetWidth;
+
+        toastTimers[auctionId].fadeTimer = setTimeout(() => {
+            toast.classList.remove('scale-100', 'opacity-100');
+            toast.classList.add('scale-110', 'opacity-0');
+
+            toastTimers[auctionId].removeTimer = setTimeout(() => {
+                toast.remove();
+                delete toastTimers[auctionId];
+            }, 300);
+        }, 2000);
+    }
+</script>
+</body>
+</html>

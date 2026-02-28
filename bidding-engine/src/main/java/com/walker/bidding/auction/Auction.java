@@ -1,0 +1,28 @@
+package com.walker.bidding.auction;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.redis.core.RedisHash;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+@RedisHash("auctions")
+public record Auction(
+        @Id String id,
+        String itemId,
+        BigDecimal currentPrice,
+        String highBidder,
+        Instant endsAt,
+        boolean active,
+        int version
+) {
+    public Auction {
+        if (id == null) {
+            id = UUID.randomUUID().toString();
+        }
+        if (currentPrice == null) {
+            currentPrice = BigDecimal.ZERO;
+        }
+    }
+}

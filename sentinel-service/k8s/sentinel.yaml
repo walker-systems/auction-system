@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinel
+spec:
+  type: LoadBalancer # Allows external access (on cloud providers or Docker Desktop)
+  selector:
+    app: sentinel
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel
+spec:
+  replicas: 2 # Demonstrate scalability!
+  selector:
+    matchLabels:
+      app: sentinel
+  template:
+    metadata:
+      labels:
+        app: sentinel
+    spec:
+      containers:
+        - name: sentinel
+          image: justinwalkerhub/sentinel-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATA_REDIS_HOST
+              value: "redis"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
