@@ -125,3 +125,17 @@ The network connection will be built and tested first using temporary, fake data
 ### Consequences
 * **Pros:** Proves the network plumbing works early. Keeps the Java and Python code strictly decoupled.
 * **Cons:** Requires writing throwaway scripts to generate the fake data.
+
+---
+
+## ADR-010: Containerization Strategy for Python ML Microservice
+
+### Context
+Java applications often use automated Buildpacks (like `mvn spring-boot:build-image`) to create containers without manual setup. However, Python Machine Learning libraries (like CatBoost) require specific operating system dependencies. Automated tools often fail to guess and install these low-level requirements correctly.
+
+### Decision
+A standard `Dockerfile` will be used to containerize the Python ML microservice instead of automated Buildpacks.
+
+### Consequences
+* **Pros:** Guarantees the production container exactly matches the local training environment.
+* **Cons:** Requires manual file maintenance and differs from the Java project's container strategy.

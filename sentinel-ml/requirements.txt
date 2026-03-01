@@ -1,0 +1,5 @@
+fastapi==0.110.0
+uvicorn==0.27.1
+pydantic==2.6.3
+catboost==1.2.3
+pandas==2.2.1
