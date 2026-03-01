@@ -1,4 +1,5 @@
 # ⚡ Real-Time Bidding & Fraud Detection Platform
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://walker-systems.github.io/auction-system/)
 
 This is a live auction platform that uses AI to catch fraudulent bids in real time. It is built with Spring Boot and Redis to handle fast, continuous data streams, instantly blocking bots without slowing down the user experience.
 
