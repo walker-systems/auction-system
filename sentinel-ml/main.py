@@ -18,10 +18,14 @@ class BidRequest(BaseModel):
 
 @app.post("/predict")
 async def predict_fraud(bid: BidRequest):
-    # Convert incoming JSON to DataFrame
-    data = pd.DataFrame([bid.dict()])
+    data = pd.DataFrame([bid.model_dump()])
     
-    # Predict
+    expected_order = [
+        "bid_amount", "ip_address", "user_agent", 
+        "reaction_time_ms", "bid_count_last_min", "is_new_ip"
+    ]
+    data = data[expected_order]
+    
     prob = model.predict_proba(data)[0][1]
     is_fraud = bool(model.predict(data)[0])
     
