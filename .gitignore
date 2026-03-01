@@ -1,0 +1,23 @@
+# =========================
+# Root Workspace Exclusions
+# =========================
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+
+# Python & Machine Learning
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Data Files 
+*.csv
+*.cbm
