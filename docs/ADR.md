@@ -3,140 +3,125 @@
 ## ADR-001: Use of Reactive Redis over RDBMS
 
 ### Context
-We expect burst traffic (10k+ TPS) during the final seconds of an auction ("sniping"). Traditional RDBMS (Postgres) blocking I/O would require massive connection pools and vertical scaling.
+Auctions experience sudden traffic spikes (10k+ TPS) in the final seconds. Standard relational databases (like Postgres) struggle to handle this concurrency without heavy scaling.
 
 ### Decision
-We will use **Spring Data Redis Reactive** as the primary source of truth for active auctions.
+**Spring Data Redis Reactive** will be used as the primary database for active auctions.
 
 ### Consequences
-* **Pros:** Ultra-low latency (<5ms). Native support for Atomic operations (Lua).
-* **Cons:** Dataset must fit in RAM.
-* **Mitigation:** We enable Redis AOF (Append Only File) for durability.
+* **Pros:** Very fast read/writes (<5ms) and built-in support for atomic operations.
+* **Cons:** All active auction data must fit in server RAM.
+* **Mitigation:** Redis AOF (Append Only File) is enabled to back up data to the disk.
 
 ---
 
 ## ADR-002: Java 25 & Records
 
 ### Context
-Domain objects in bidding systems are data-heavy and behavior-light.
+Domain objects in this bidding system mostly hold data, rather than complex business logic.
 
 ### Decision
-We use **Java 25 Records** for all domain models.
+**Java 25 Records** will be used for all domain models.
 
 ### Consequences
-* **Pros:** Immutability by default (thread-safe). Compact constructors for validation.
-* **Cons:** Cannot use JPA (Hibernate) lazy loading (not an issue since we use Redis).
+* **Pros:** Immutable and thread-safe by default.
+* **Cons:** Cannot use standard JPA (Hibernate) lazy loading. This is acceptable since Redis is used instead of JPA.
 
 ---
 
 ## ADR-003: Adoption of ReactiveRedisTemplate & JSON Serialization
 
 ### Context
-I initially attempted to use `ReactiveCrudRepository` (the standard Spring Data interface). However, Spring Data Redis does not support reactive repositories for Redis (only blocking). This caused `InvalidDataAccessApiUsageException` at startup.
-
-Additionally, standard JSON serializers (`Jackson2JsonRedisSerializer`) are deprecated in Spring Data Redis 4.0 in favor of `RedisSerializer` API.
+Standard Spring Data reactive repositories do not support Redis. Additionally, the default JSON serializer is deprecated.
 
 ### Decision
-1.  **Manual Repositories (no Interface):** Manually implement the Repository pattern using `ReactiveRedisTemplate`. This provides fine-grained control over serialization and atomic operations (CAS).
-2.  **Serialization:** We use `RedisSerializer.json()` instead of the deprecated classes.
+1. Database access methods (Repository pattern) are manually written using `ReactiveRedisTemplate`.
+2. The newer `RedisSerializer.json()` is used for serialization.
 
 ### Consequences
-* **Positive:** Full non-blocking I/O support. No compilation warnings.
-* **Negative:** Must write all code for `save`, `find`, and `delete` methods (no auto-generated queries).
+* **Pros:** Fully non-blocking I/O.
+* **Cons:** Requires writing custom code for standard database actions (`save`, `find`, `delete`).
 
 ---
 
-## ADR-004: Using Mono.defer() for Stateful Mocking in Reactive Retry Tests
+## ADR-004: Using Mono.defer() for Reactive Database Mocking
 
 ### Context
-A unit test was developed to simulate a race condition starting with a baseline state (State A: price = $100, version = 1).
-A new bidder (User C) attempts to bid $115, operating under the assumption that State A is the current state.
-
-The Lua script inside `AuctionRepository` (executed via Redis Template) acts as an optimistic lock.
-It only permits an update if the current database version matches the proposed version minus one.
-The proposed version is calculated by grabbing the database version at the moment the bid is initiated and adding one to it.
-
-The test simulates a scenario where another bidder (User B) successfully submits a bid during the window between
-User C accessing the database version (State A, version 1) to create a proposal (version 2), and the moment User C actually attempts
-to save this new bid.
-
-This creates a version mismatch. Because User B already updated the database version to 2, the database version
-no longer equals User C's proposed version minus one (2 != 2 - 1). Consequently, User C's save attempt is rejected by the Lua script.
-The .retryWhen operator then activates, causing the system to execute findById again,
-retrieve the correct current version (2), create a valid new proposal (version 3), and successfully submit it.
-
-Attempting to mimic this state change with standard Mockito chaining (`.thenReturn(Mono.just(stateA)).thenReturn(Mono.just(stateB))`)
-results in an `AssertionFailedError`.
-
-This failure occurs because Project Reactor constructs the reactive pipeline at assembly time.
-The root method, `auctionRepository.findById()`, is invoked only once during construction. When `.retryWhen()` triggers,
-it does not rebuild the pipeline; it merely resubscribes to the original source. Because the mocked source was a `Mono.just()` created at assembly time,
-it repeatedly emits the outdated stateA on every resubscription, failing to accurately simulate a dynamic database.
+When unit testing code that retries a failed database update, standard mock objects return the exact same data on every retry. This fails to simulate a real database where the data might change between retries.
 
 ### Decision
-When testing reactive streams where the source data must change across multiple subscriptions
-(e.g., simulating database updates during a retry loop), it is required to use `Mono.defer()` in conjunction with an `AtomicInteger` to track the number of subscriptions.
-
-`Mono.defer()` ensures the mock's logic is evaluated dynamically at subscription time rather than statically at assembly time.
-This allows the mocked response to change across retries, accurately reflecting the behavior of a real database.
+`Mono.defer()` is utilized when mocking reactive streams that need to simulate changing states. 
 
 ### Consequences
-* **Positive:** Unit tests accurately reflect the "cold" nature of real database queries, successfully validating that the retry loop
-  fetches fresh data and applies business logic correctly upon recovering from a collision.
-* **Negative:** N/A
+* **Pros:** Tests correctly simulate the database changing during a retry loop.
+* **Cons:** N/A
 
 ---
 
 ## ADR-005: Decoupling Sentinel from Bidding Engine's Redis
 
 ### Context
-Currently, the Sentinel Service and the core Bidding Engine share the same Redis instance for both Pub/Sub messaging and state management. As the system scales, the security evaluation workload could bottleneck the primary transaction database.
+Currently, the AI (Sentinel) and the main bidding system share one Redis database. Heavy AI data processing could slow down the core bidding system.
 
 ### Decision
-*(Planned)* We will decouple the Sentinel Service's state management from the Bidding Engine's Redis instance. Redis will remain the shared message broker (Pub/Sub) for real-time events, but Sentinel will maintain its own isolated datastore for tracking user reputation and historical analysis.
+*(Planned)* The Sentinel's state management will be moved to its own separate database. Redis will only be shared for real-time messaging (Pub/Sub).
 
 ### Consequences
-* **Positive:** Prevents noisy-neighbor issues where heavy AI/Sentinel queries degrade core bidding performance. Enforces strict microservice boundaries.
-* **Negative:** Increases infrastructure footprint and deployment complexity.
+* **Pros:** Prevents the AI from slowing down user bids.
+* **Cons:** Requires setting up and managing more database infrastructure.
 
 ---
 
 ## ADR-006: Providing the Sentinel a Feedback Loop
 
 ### Context
-The current Sentinel AI evaluates bids in isolation without a mechanism to learn from false positives (e.g., mistakenly flagging an aggressive human bidder as a bot).
+The AI currently evaluates bids without any way to learn from its mistakes (e.g., flagging a real user as a bot).
 
 ### Decision
-*(Planned)* Implement an asynchronous feedback loop. Store AI decisions in a persistent audit log, allowing human administrators (or automated validation rules) to flag incorrect rollbacks. This data will be fed back into the model to dynamically adjust its scoring weights.
+*(Planned)* AI decisions will be saved to an audit log. Admins will be allowed to correct mistakes, and this corrected data will be used to retrain the model.
 
 ### Consequences
-* **Positive:** Model accuracy will improve over time; false positive rates will decrease.
-* **Negative:** Requires building an admin review UI and an asynchronous data pipeline to process the feedback.
+* **Pros:** The AI gets more accurate over time.
+* **Cons:** Requires building an admin interface and a data feedback pipeline.
 
 ---
 
-## ADR-007: Upgrading to Event Sourcing to Save Previous Bidder
+## ADR-007: Upgrading to Event Sourcing for Rollbacks
 
 ### Context
-When the Sentinel triggers a rollback on a fraudulent bid, we currently overwrite the state. This loses the context of who the *previous* legitimate bidder was, making it difficult to accurately restore the auction to its exact prior state.
+When a fraudulent bid is canceled, the database is currently overwritten. This deletes the record of who the previous valid bidder was.
 
 ### Decision
-*(Planned)* Transition the core architecture from a purely state-based CRUD model to **Event Sourcing**. Instead of storing just the "current highest bid," we will append every bid, rejection, and rollback as an immutable event in a ledger. The current state will be a projection derived from this event stream.
+*(Planned)* The architecture will transition to Event Sourcing. Instead of just saving the "current bid," every action (bids, rejections) will be saved as an append-only log of events.
 
 ### Consequences
-* **Positive:** Flawless state reconstruction during rollbacks. Provides the exact time-series data required for training future Machine Learning models.
-* **Negative:** Significant architectural rewrite. Event eventual consistency models will need to be carefully managed to maintain the sub-millisecond UI requirements.
+* **Pros:** Makes it easy and accurate to undo fraudulent bids. Provides excellent historical data for training the AI.
+* **Cons:** Requires a major architectural rewrite.
 
 ---
 
 ## ADR-008: Deepening AI Functionality
 
 ### Context
-Our Sprint 1 implementation utilizes generalized LLM endpoints via Spring AI to detect anomalous behavior. While effective for a baseline, it is not optimized for high-throughput, sub-millisecond tabular data evaluation.
+Using a standard LLM via Spring AI is too slow and expensive for evaluating high-speed numerical data (like reaction times and bid amounts).
 
 ### Decision
-*(Planned)* Deepen the AI functionality by transitioning from a generalized LLM to a specialized Machine Learning pipeline. We will utilize `CatBoost` for rapid classification of tabular telemetry (reaction times, bid deltas, IP reputation) and deploy it via a high-performance Python `FastAPI` sidecar.
+*(Planned)* The general LLM will be replaced with a specialized Machine Learning model (`CatBoost`) running on a Python `FastAPI` server.
 
 ### Consequences
-* **Positive:** Drastically reduced latency and lower operational costs compared to external LLM API calls.
-* **Negative:** Introduces polyglot architecture (Java + Python) and requires dedicated MLOps infrastructure for model training and deployment.
+* **Pros:** Much faster processing and lower costs.
+* **Cons:** Adds Python to the tech stack, necessitating the management of a multi-language (polyglot) architecture.
+
+---
+
+## ADR-009: Decoupled ML Pipeline via Synthetic Data
+
+### Context
+Building a complex ML model and connecting a new Python server to the existing Java backend at the same time is risky. It can cause massive integration bugs at the end of the sprint.
+
+### Decision
+The network connection will be built and tested first using temporary, fake data and a simple AI model. Once the Java and Python servers communicate perfectly, the real, complex ML model will be swapped in.
+
+### Consequences
+* **Pros:** Proves the network plumbing works early. Keeps the Java and Python code strictly decoupled.
+* **Cons:** Requires writing throwaway scripts to generate the fake data.

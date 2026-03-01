@@ -13,22 +13,25 @@ def generate_bids(num_bids, is_fraud):
         bid_amount = round(random.uniform(10.0, 5000.0), 2)
         ip_address = fake.ipv4()
         
+        is_new_ip = 1 if (is_fraud or random.random() < 0.2) else 0
+
         if is_fraud:
-            # Fraudulent Behavior Profile: 
-            # Bots usually have sub-50ms reaction times and weird/automated User-Agents
-            user_agent = random.choice([
-                "python-requests/2.31.0", 
-                "curl/7.68.0", 
-                "Go-http-client/1.1", 
-                fake.user_agent() # Occasionally spoof a real browser
-            ])
-            reaction_time_ms = random.randint(1, 49) 
-            
+            if random.random() < 0.30:
+                reaction_time_ms = random.randint(400, 1200) # Human speed
+                bid_count_last_min = random.randint(1, 3)    # Human frequency
+                user_agent = fake.user_agent()               
+            else:
+                reaction_time_ms = random.randint(10, 150)   # Fast bot
+                bid_count_last_min = random.randint(10, 50)  # High frequency
+                user_agent = "python-requests/2.31.0"
         else:
-            # Legitimate Behavior Profile: 
-            # Humans take time to react and use standard web browsers
+            if random.random() < 0.10:
+                reaction_time_ms = random.randint(100, 200) # Fast "Sniper"
+            else:
+                reaction_time_ms = random.randint(300, 5000)
+            
+            bid_count_last_min = random.randint(1, 5)
             user_agent = fake.user_agent()
-            reaction_time_ms = random.randint(250, 4500)
 
         bids.append({
             "user_name": user_name,
@@ -36,6 +39,8 @@ def generate_bids(num_bids, is_fraud):
             "ip_address": ip_address,
             "user_agent": user_agent,
             "reaction_time_ms": reaction_time_ms,
+            "bid_count_last_min": bid_count_last_min, 
+            "is_new_ip": is_new_ip,                   
             "is_fraud": 1 if is_fraud else 0
         })
     return bids
@@ -47,11 +52,9 @@ if __name__ == "__main__":
     print("🚨 Generating 500 fraudulent bot bids...")
     fraud_bids = generate_bids(500, is_fraud=True)
     
-    # Combine and shuffle the dataset
     all_bids = legit_bids + fraud_bids
     random.shuffle(all_bids)
     
-    # Export to CSV using Pandas
     df = pd.DataFrame(all_bids)
     output_filename = "fraud_dataset.csv"
     df.to_csv(output_filename, index=False)
