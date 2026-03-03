@@ -10,7 +10,6 @@ import reactor.util.retry.Retry;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.ConcurrentModificationException;
 
 @Service
 @RequiredArgsConstructor
@@ -19,7 +18,9 @@ public class AuctionService {
 
     private final AuctionRepository auctionRepository;
 
-    public Mono<Auction> placeBid(String auctionId, String bidder, BigDecimal bidAmount) {
+    // 1. Updated signature to accept Telemetry
+    public Mono<Auction> placeBid(String auctionId, String bidder, BigDecimal bidAmount,
+                                  String ipAddress, String userAgent, int reactionTimeMs) {
 
         return auctionRepository.findById(auctionId)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("Auction not found: " + auctionId)))
@@ -33,6 +34,7 @@ public class AuctionService {
                                 + auction.currentPrice()));
                     }
 
+                    // 2. Add Telemetry to the published Auction DTO
                     Auction updatedAuction = new Auction(
                             auction.id(),
                             auction.itemId(),
@@ -40,7 +42,14 @@ public class AuctionService {
                             bidder,
                             auction.endsAt(),
                             auction.active(),
-                            auction.version() + 1
+                            auction.version() + 1,
+
+                            // --- Telemetry Data ---
+                            ipAddress,
+                            userAgent,
+                            reactionTimeMs,
+                            1, // Dummy MVP value for bidCountLastMin
+                            0  // Dummy MVP value for isNewIp
                     );
 
                     return auctionRepository.updateWithVersion(updatedAuction)
@@ -51,13 +60,11 @@ public class AuctionService {
                                             .thenReturn(updatedAuction);
                                 } else {
                                     log.warn("⚠️ Collision detected for auction "
-                                                + "{}. Someone else bid at the exact same time!", auctionId);
+                                            + "{}. Someone else bid at the exact same time!", auctionId);
                                     return Mono.error(new ConcurrentBidException("Bid collision"));
                                 }
                             });
                 })
-
-                // Retry from the beginning (findById...) in case of bid collision error (3 additional tries, then 409)
                 .retryWhen(Retry.backoff(3, Duration.ofMillis(50))
                         .filter(throwable -> throwable instanceof ConcurrentBidException)
                 );
@@ -80,17 +87,24 @@ public class AuctionService {
 
                         BigDecimal revertedPrice = auction.currentPrice().subtract(new BigDecimal("10.00"));
 
+                        // 3. The system rollback event also needs the updated constructor
                         Auction revertedAuction = new Auction(
                                 auction.id(),
                                 auction.itemId(),
                                 revertedPrice,
-                                "System", // Reset to default
+                                "System",
                                 auction.endsAt(),
                                 auction.active(),
-                                auction.version() + 1 // Increment version so the update succeeds
+                                auction.version() + 1,
+
+                                // --- Blank Telemetry for System Actions ---
+                                null,
+                                null,
+                                0,
+                                0,
+                                0
                         );
 
-                        // Save the fix, then publish the update so the UI flashes
                         return auctionRepository.updateWithVersion(revertedAuction)
                                 .filter(Boolean::booleanValue)
                                 .flatMap(success -> auctionRepository.publishUpdate(revertedAuction));

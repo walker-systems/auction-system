@@ -24,11 +24,9 @@ public class FraudListener {
                     String[] parts = message.getMessage().split(":");
                     if (parts.length == 2) {
                         auctionService.revertFraudulentBid(parts[0], parts[1])
-                                .subscribe(
-                                        null,
-                                        err -> log.error("Failed to revert bid: ", err),
-                                        () -> log.info("✅ Revert successfully committed to DB and published.")
-                                );
+                                .doOnSuccess(v -> log.info("✅ Revert successfully committed to DB and published."))
+                                .doOnError(err -> log.error("Failed to revert bid: ", err))
+                                .subscribe(); // Empty subscribe kicks off the reactive chain safely
                     }
                 });
     }
