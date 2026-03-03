@@ -28,25 +28,17 @@ public class AuctionRepositoryTest {
     @Test
     void updateWithVersion_whenNewVersionGreaterByOne_shouldUpdateAndReturnTrue() {
         Auction startingAuction = new Auction(
-                "test-1",
-                "item-1",
-                new BigDecimal("100.00"),
-                "user1",
-                Instant.now().plusSeconds(3600),
-                true,
-                1
+                "test-1", "item-1", new BigDecimal("100.00"), "user1",
+                Instant.now().plusSeconds(3600), true, 1,
+                null, null, 0, 0, 0 // Dummy telemetry for repo test
         );
 
         auctionRepository.save(startingAuction).block();
 
         Auction proposedAuction = new Auction(
-                "test-1",
-                "item-1",
-                new BigDecimal("150.00"),
-                "user2",
-                startingAuction.endsAt(),
-                true,
-                2 // proposedAuction.version - 1 == startingAuction.version
+                "test-1", "item-1", new BigDecimal("150.00"), "user2",
+                startingAuction.endsAt(), true, 2, // proposedAuction.version - 1 == startingAuction.version
+                null, null, 0, 0, 0
         );
 
         StepVerifier.create(auctionRepository.updateWithVersion(proposedAuction))
@@ -57,25 +49,17 @@ public class AuctionRepositoryTest {
     @Test
     void updateWithVersion_whenNewVersionNotGreaterByOne_shouldRejectAndReturnFalse() {
         Auction startingAuction = new Auction(
-                "test-2",
-                "item-2",
-                new BigDecimal("100.00"),
-                "user-1",
-                Instant.now().plusSeconds(3600),
-                true,
-                1
+                "test-2", "item-2", new BigDecimal("100.00"), "user-1",
+                Instant.now().plusSeconds(3600), true, 1,
+                null, null, 0, 0, 0
         );
 
         auctionRepository.save(startingAuction).block();
 
         Auction proposedAuction = new Auction(
-                "test-2",
-                "item-2",
-                new BigDecimal("150.00"),
-                "sneakyUser",
-                startingAuction.endsAt(),
-                true,
-                6 // version too large
+                "test-2", "item-2", new BigDecimal("150.00"), "sneakyUser",
+                startingAuction.endsAt(), true, 6, // version too large
+                null, null, 0, 0, 0
         );
 
         StepVerifier.create(auctionRepository.updateWithVersion(proposedAuction))

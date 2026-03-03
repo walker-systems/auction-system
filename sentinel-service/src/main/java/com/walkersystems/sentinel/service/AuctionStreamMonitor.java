@@ -35,6 +35,12 @@ public class AuctionStreamMonitor {
         return Mono.defer(() -> {
             try {
                 AuctionDto auction = objectMapper.readValue(rawJson, AuctionDto.class);
+
+                // --- FIX: Ignore system-generated events (like rollbacks) ---
+                if ("System".equals(auction.highBidder())) {
+                    return Mono.empty();
+                }
+
                 log.info("🧠 Sentinel analyzing bid by {}...", auction.highBidder());
 
                 FraudCheckRequest request = new FraudCheckRequest(
@@ -43,7 +49,7 @@ public class AuctionStreamMonitor {
                         auction.reactionTimeMs(),
                         auction.bidCountLastMin(),
                         auction.isNewIp(),
-                        auction.bidAmount()
+                        auction.currentPrice()
                 );
 
                 return fastApiWebClient.post()
@@ -72,4 +78,5 @@ public class AuctionStreamMonitor {
             log.error("💥 Failed to process AI hook: {}", e.getMessage());
             return Mono.empty();
         });
-    }}
+    }
+}

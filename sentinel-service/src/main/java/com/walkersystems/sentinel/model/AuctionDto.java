@@ -15,5 +15,5 @@ public record AuctionDto(
         int reactionTimeMs,
         int bidCountLastMin,
         int isNewIp,
-        double bidAmount
+        double currentPrice
 ) {}

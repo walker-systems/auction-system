@@ -3,7 +3,7 @@ spring:
     name: bidding-engine
   docker:
     compose:
-      file: ../docker-compose.yml
+      file: ../compose.yml
 
   # 1. Redis Configuration
   data:

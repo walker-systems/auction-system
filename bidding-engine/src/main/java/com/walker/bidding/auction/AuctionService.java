@@ -34,6 +34,10 @@ public class AuctionService {
                                 + auction.currentPrice()));
                     }
 
+                    // Simulate Sprint 3 aggregations: Bots (< 100ms reaction) get fake high-velocity metrics
+                    int simulatedBidCount = (reactionTimeMs < 100) ? 65 : 1;
+                    int simulatedNewIp = (reactionTimeMs < 100) ? 1 : 0;
+
                     // 2. Add Telemetry to the published Auction DTO
                     Auction updatedAuction = new Auction(
                             auction.id(),
@@ -48,10 +52,9 @@ public class AuctionService {
                             ipAddress,
                             userAgent,
                             reactionTimeMs,
-                            1, // Dummy MVP value for bidCountLastMin
-                            0  // Dummy MVP value for isNewIp
+                            simulatedBidCount, // <-- Swap the hardcoded 1 for our simulated swarm velocity
+                            simulatedNewIp     // <-- Swap the hardcoded 0 for our simulated new IP flag
                     );
-
                     return auctionRepository.updateWithVersion(updatedAuction)
                             .flatMap(bidSuccess -> {
                                 if (bidSuccess) {
