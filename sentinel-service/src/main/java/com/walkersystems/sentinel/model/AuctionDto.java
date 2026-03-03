@@ -7,5 +7,13 @@ public record AuctionDto(
         String id,
         String itemId,
         String highBidder,
-        boolean active
+        boolean active,
+
+        // --- New Telemetry Fields ---
+        String ipAddress,
+        String userAgent,
+        int reactionTimeMs,
+        int bidCountLastMin,
+        int isNewIp,
+        double bidAmount
 ) {}

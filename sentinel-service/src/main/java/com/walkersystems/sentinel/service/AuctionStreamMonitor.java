@@ -37,18 +37,15 @@ public class AuctionStreamMonitor {
                 AuctionDto auction = objectMapper.readValue(rawJson, AuctionDto.class);
                 log.info("🧠 Sentinel analyzing bid by {}...", auction.highBidder());
 
-                // TODO: In the next ticket, extract this real telemetry from the bid.
-                // For now, we simulate a highly suspicious bot bid to test the AI.
                 FraudCheckRequest request = new FraudCheckRequest(
-                        "192.168.1.100",
-                        "java-webclient-test",
-                        15,     // 15ms reaction time (superhuman)
-                        45,     // 45 bids in the last minute (bot behavior)
-                        1,      // New IP address
-                        500.0   // Bid amount
+                        auction.ipAddress(),
+                        auction.userAgent(),
+                        auction.reactionTimeMs(),
+                        auction.bidCountLastMin(),
+                        auction.isNewIp(),
+                        auction.bidAmount()
                 );
 
-                // Call the Python FastAPI microservice
                 return fastApiWebClient.post()
                         .uri("/predict")
                         .bodyValue(request)
@@ -56,8 +53,8 @@ public class AuctionStreamMonitor {
                         .bodyToMono(FraudCheckResponse.class)
                         .flatMap(response -> {
                             if (response.isFraud()) {
-                                log.warn("🚨 AI SENTINEL ALERT: Fraudulent activity detected from user '{}'! Probability: {}%",
-                                        auction.highBidder(), (response.fraudProbability() * 100));
+                                log.warn("🚨 AI SENTINEL ALERT: Fraudulent activity detected from user '{}'! Probability: String.format(\"%.2f%%\", response.fraudProbability() * 100)",
+                                        auction.highBidder());
 
                                 String payload = auction.id() + ":" + auction.highBidder();
                                 return redisTemplate.convertAndSend("auction:fraud", payload).then();
@@ -74,5 +71,4 @@ public class AuctionStreamMonitor {
             log.error("💥 Failed to process AI hook: {}", e.getMessage());
             return Mono.empty();
         });
-    }
-}
+    }}
