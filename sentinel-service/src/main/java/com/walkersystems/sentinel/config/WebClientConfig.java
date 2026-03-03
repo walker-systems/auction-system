@@ -1,4 +1,4 @@
-package com.walkersystems.sentinel;
+package com.walkersystems.sentinel.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

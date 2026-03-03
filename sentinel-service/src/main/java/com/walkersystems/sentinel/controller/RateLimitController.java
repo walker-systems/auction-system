@@ -1,5 +1,6 @@
-package com.walkersystems.sentinel;
+package com.walkersystems.sentinel.controller;
 
+import com.walkersystems.sentinel.service.RateLimiterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;

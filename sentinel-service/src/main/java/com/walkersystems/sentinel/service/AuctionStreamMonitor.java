@@ -1,8 +1,9 @@
-package com.walkersystems.sentinel;
+package com.walkersystems.sentinel.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.walkersystems.sentinel.FraudCheckRequest;
-import com.walkersystems.sentinel.FraudCheckResponse;
+import com.walkersystems.sentinel.model.AuctionDto;
+import com.walkersystems.sentinel.model.FraudCheckRequest;
+import com.walkersystems.sentinel.model.FraudCheckResponse;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package com.walkersystems.sentinel;
+package com.walkersystems.sentinel.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

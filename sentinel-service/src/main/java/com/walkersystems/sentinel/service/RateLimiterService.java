@@ -1,4 +1,4 @@
-package com.walkersystems.sentinel;
+package com.walkersystems.sentinel.service;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
