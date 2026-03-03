@@ -6,3 +6,13 @@ services:
       - "6379:6379"
       - "8001:8001"
     restart: always
+
+  sentinel-ml:
+    build: 
+      context: ./sentinel-ml 
+    container_name: sentinel-ml-service
+    ports:
+      - "8000:8000"
+    restart: always
+    depends_on:
+      - redis

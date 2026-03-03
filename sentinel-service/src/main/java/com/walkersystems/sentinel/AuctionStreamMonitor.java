@@ -1,15 +1,16 @@
 package com.walkersystems.sentinel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.walkersystems.sentinel.FraudCheckRequest;
+import com.walkersystems.sentinel.FraudCheckResponse;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 @Service
 @RequiredArgsConstructor
@@ -17,15 +18,11 @@ import reactor.core.scheduler.Schedulers;
 public class AuctionStreamMonitor {
 
     private final ReactiveRedisTemplate<String, String> redisTemplate;
-    private final ChatClient.Builder chatClientBuilder;
     private final ObjectMapper objectMapper;
-
-    private ChatClient chatClient;
+    private final WebClient fastApiWebClient;
 
     @PostConstruct
     public void startMonitoring() {
-        this.chatClient = chatClientBuilder.build();
-
         log.info("🛡️ Sentinel Stream Monitor starting... listening to 'auction:updates'");
 
         redisTemplate.listenTo(ChannelTopic.of("auction:updates"))
@@ -39,30 +36,35 @@ public class AuctionStreamMonitor {
                 AuctionDto auction = objectMapper.readValue(rawJson, AuctionDto.class);
                 log.info("🧠 Sentinel analyzing bid by {}...", auction.highBidder());
 
-                String prompt = String.format(
-                        "You are a fraud detection bot for an auction site. " +
-                                "A user named '%s' just placed a bid. " +
-                                "If the username contains 'bot', 'script', or 'test', reply ONLY with 'FRAUD'. " +
-                                "Otherwise, reply ONLY with 'CLEAN'.",
-                        auction.highBidder()
+                // TODO: In the next ticket, extract this real telemetry from the bid.
+                // For now, we simulate a highly suspicious bot bid to test the AI.
+                FraudCheckRequest request = new FraudCheckRequest(
+                        "192.168.1.100",
+                        "java-webclient-test",
+                        15,     // 15ms reaction time (superhuman)
+                        45,     // 45 bids in the last minute (bot behavior)
+                        1,      // New IP address
+                        500.0   // Bid amount
                 );
 
-                Mono<String> aiDecisionMono = Mono.fromCallable(() -> {
-                    return chatClient.prompt(prompt).call().content();
-                }).subscribeOn(Schedulers.boundedElastic());
+                // Call the Python FastAPI microservice
+                return fastApiWebClient.post()
+                        .uri("/predict")
+                        .bodyValue(request)
+                        .retrieve()
+                        .bodyToMono(FraudCheckResponse.class)
+                        .flatMap(response -> {
+                            if (response.isFraud()) {
+                                log.warn("🚨 AI SENTINEL ALERT: Fraudulent activity detected from user '{}'! Probability: {}%",
+                                        auction.highBidder(), (response.fraudProbability() * 100));
 
-                return aiDecisionMono.flatMap(aiDecision -> {
-                    if ("FRAUD".equals(aiDecision.trim())) {
-                        log.warn("🚨 AI SENTINEL ALERT: Fraudulent activity detected from user '{}'!", auction.highBidder());
-
-                        String payload = auction.id() + ":" + auction.highBidder();
-
-                        return redisTemplate.convertAndSend("auction:fraud", payload).then();
-                    } else {
-                        log.info("✅ AI Sentinel cleared user '{}'.", auction.highBidder());
-                        return Mono.empty();
-                    }
-                });
+                                String payload = auction.id() + ":" + auction.highBidder();
+                                return redisTemplate.convertAndSend("auction:fraud", payload).then();
+                            } else {
+                                log.info("✅ AI Sentinel cleared user '{}'.", auction.highBidder());
+                                return Mono.empty();
+                            }
+                        });
 
             } catch (Exception e) {
                 return Mono.error(e);
