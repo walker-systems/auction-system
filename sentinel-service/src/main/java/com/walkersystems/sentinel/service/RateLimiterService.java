@@ -1,5 +1,6 @@
-package com.walkersystems.sentinel;
+package com.walkersystems.sentinel.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -10,14 +11,18 @@ import java.time.Instant;
 import java.util.List;
 
 @Service
+@Slf4j
 public class RateLimiterService {
 
     private final ReactiveRedisTemplate<String, String> redisTemplate;
-    private final RedisScript<List> tokenBucketScript;
 
+    // 1. Added wildcard <?> to satisfy the IDE's raw type warning
+    private final RedisScript<List<?>> tokenBucketScript;
+
+    @SuppressWarnings({"rawtypes", "unchecked"}) // Safely ignores the raw List.class cast
     public RateLimiterService(ReactiveRedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
-        this.tokenBucketScript = RedisScript.of(new ClassPathResource("scripts/token_bucket.lua"), List.class);
+        this.tokenBucketScript = (RedisScript<List<?>>) (RedisScript) RedisScript.of(new ClassPathResource("scripts/token_bucket.lua"), List.class);
     }
 
     /**
@@ -28,28 +33,25 @@ public class RateLimiterService {
      * @param tokensRequested Cost of this specific request (usually 1 token).
      * @return Mono<Boolean> true if allowed, false if denied.
      */
-    public Mono<Boolean> isAllowed(String identifier,
-                                   int tokenCapacity,
-                                   int tokenRefillRate,
-                                   int tokensRequested) {
-        
+    public Mono<Boolean> isAllowed(String identifier, int tokenCapacity, int tokenRefillRate, int tokensRequested) {
+
         // Check for unfulfillable request
         if (tokensRequested > tokenCapacity) {
-            System.err.println("Request denied: cost (" + tokensRequested +
-                               ") exceeds max token capacity (" + tokenCapacity + ")");
+            log.warn("⚠️ Request denied: cost ({}) exceeds max token capacity ({})",
+                    tokensRequested, tokenCapacity);
             return Mono.just(false);
         }
-        
-        var key = "rate_limit:" + identifier;
-        var keys = List.of(key);                                     // KEYS[1]
 
-        var rateArg = String.valueOf(tokenRefillRate);               // ARGV[1]
-        var capacityArg = String.valueOf(tokenCapacity);             // ARGV[2]
-        var nowArg = String.valueOf(Instant.now().getEpochSecond()); // ARGV[3]
-        var requestedArg = String.valueOf(tokensRequested);          // ARGV[4]
+        // 2. Replaced all 'var' keywords with explicit standard types
+        String key = "rate_limit:" + identifier;
+        List<String> keys = List.of(key);                                     // KEYS[1]
 
-        var args = List.of(rateArg, capacityArg, nowArg, requestedArg);
+        String rateArg = String.valueOf(tokenRefillRate);                     // ARGV[1]
+        String capacityArg = String.valueOf(tokenCapacity);                   // ARGV[2]
+        String nowArg = String.valueOf(Instant.now().getEpochSecond());       // ARGV[3]
+        String requestedArg = String.valueOf(tokensRequested);                // ARGV[4]
 
+        List<String> args = List.of(rateArg, capacityArg, nowArg, requestedArg);
 
         return redisTemplate.execute(tokenBucketScript, keys, args)
                 .next()

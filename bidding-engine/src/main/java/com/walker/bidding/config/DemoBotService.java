@@ -39,13 +39,11 @@ public class DemoBotService {
         }
         log.info("🤖 Demo Bot Swarm ACTIVATED!");
 
-        // SPEED INCREASE: Bots now bid every 800 milliseconds!
         botTask = Flux.interval(Duration.ofMillis(200), Duration.ofMillis(800))
                 .flatMap(tick -> placeRandomBid())
                 .subscribe();
     }
 
-    // Call this from the Reset button
     public synchronized void stopBotSwarm() {
         if (botTask != null && !botTask.isDisposed()) {
             botTask.dispose();
@@ -60,14 +58,38 @@ public class DemoBotService {
                 .flatMap(activeAuctions -> {
                     if (activeAuctions.isEmpty()) return Mono.empty();
 
+                    // 1. Pick a random auction and persona
                     Auction target = activeAuctions.get(ThreadLocalRandom.current().nextInt(activeAuctions.size()));
                     String botName = AI_PERSONAS.get(ThreadLocalRandom.current().nextInt(AI_PERSONAS.size()));
-                    BigDecimal bidAmount = target.currentPrice().add(BigDecimal.valueOf(10));
 
-                    log.info("🤖 Bot '{}' bidding ${} on {}", botName, bidAmount, target.itemId());
+                    // Generate a random bid increment between $1 and $100
+                    int randomIncrement = ThreadLocalRandom.current().nextInt(1, 101);
+                    BigDecimal bidAmount = target.currentPrice().add(BigDecimal.valueOf(randomIncrement));
 
-                    return auctionService.placeBid(target.id(), botName, bidAmount)
-                            .onErrorResume(e -> Mono.empty());
+                    // 2. Generate simulated telemetry based on the persona name
+                    // If the name contains "bot" or "script", make it look like a fast machine.
+                    boolean isSuspicious = botName.toLowerCase().contains("bot") || botName.toLowerCase().contains("script");
+
+                    String ipAddress = isSuspicious ? "192.168.1.99" : "72.14.213.15";
+                    String userAgent = isSuspicious ? "python-requests/2.31.0" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/121.0.0.0";
+
+                    // Bots react in 10-50ms (superhuman), humans react in 400-2000ms.
+                    int reactionTimeMs = isSuspicious ?
+                            ThreadLocalRandom.current().nextInt(10, 51) :
+                            ThreadLocalRandom.current().nextInt(400, 2001);
+
+                    log.info("🤖 Bot '{}' bidding ${} on {} (Reaction: {}ms)",
+                            botName, bidAmount, target.itemId(), reactionTimeMs);
+
+                    // 3. Call the updated service method with all 6 parameters
+                    return auctionService.placeBid(
+                            target.id(),
+                            botName,
+                            bidAmount,
+                            ipAddress,
+                            userAgent,
+                            reactionTimeMs
+                    ).onErrorResume(e -> Mono.empty());
                 }).then();
     }
 }

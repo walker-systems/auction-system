@@ -1,4 +1,4 @@
-package com.walkersystems.sentinel;
+package com.walkersystems.sentinel.config;
 
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;

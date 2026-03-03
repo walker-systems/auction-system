@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 
 @WebFluxTest(AuctionController.class)
@@ -35,10 +36,11 @@ class AuctionControllerTest {
                 "webUser",
                 Instant.now().plusSeconds(3600),
                 true,
-                2
+                2,
+                "127.0.0.1", "test-agent", 150, 1, 0 // Telemetry
         );
 
-        Mockito.when(auctionService.placeBid(eq(auctionId), eq("webUser"), eq(bidAmount)))
+        Mockito.when(auctionService.placeBid(eq(auctionId), eq("webUser"), eq(bidAmount), any(), any(), eq(150)))
                 .thenReturn(Mono.just(updatedAuction));
 
         webTestClient.post()
@@ -47,7 +49,8 @@ class AuctionControllerTest {
                 .bodyValue("""
                         {
                           "bidder": "webUser",
-                          "amount": 150.00
+                          "amount": 150.00,
+                          "reactionTimeMs": 150
                         }
                         """)
                 .exchange()
@@ -62,7 +65,7 @@ class AuctionControllerTest {
         String auctionId = "test-1";
         BigDecimal bidAmount = new BigDecimal("150.00");
 
-        Mockito.when(auctionService.placeBid(eq(auctionId), eq("unluckyUser"), eq(bidAmount)))
+        Mockito.when(auctionService.placeBid(eq(auctionId), eq("unluckyUser"), eq(bidAmount), any(), any(), eq(120)))
                 .thenReturn(Mono.error(new ConcurrentBidException("Bid collision")));
 
         webTestClient.post()
@@ -71,7 +74,8 @@ class AuctionControllerTest {
                 .bodyValue("""
                         {
                           "bidder": "unluckyUser",
-                          "amount": 150.00
+                          "amount": 150.00,
+                          "reactionTimeMs": 120
                         }
                         """)
                 .exchange()

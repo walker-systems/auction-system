@@ -1,5 +1,6 @@
 package com.walkersystems.sentinel;
 
+import com.walkersystems.sentinel.service.RateLimiterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

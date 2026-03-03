@@ -1,8 +1,9 @@
-package com.walkersystems.sentinel;
+package com.walkersystems.sentinel.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.walkersystems.sentinel.FraudCheckRequest;
-import com.walkersystems.sentinel.FraudCheckResponse;
+import com.walkersystems.sentinel.model.AuctionDto;
+import com.walkersystems.sentinel.model.FraudCheckRequest;
+import com.walkersystems.sentinel.model.FraudCheckResponse;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,20 +35,23 @@ public class AuctionStreamMonitor {
         return Mono.defer(() -> {
             try {
                 AuctionDto auction = objectMapper.readValue(rawJson, AuctionDto.class);
+
+                // --- FIX: Ignore system-generated events (like rollbacks) ---
+                if ("System".equals(auction.highBidder())) {
+                    return Mono.empty();
+                }
+
                 log.info("🧠 Sentinel analyzing bid by {}...", auction.highBidder());
 
-                // TODO: In the next ticket, extract this real telemetry from the bid.
-                // For now, we simulate a highly suspicious bot bid to test the AI.
                 FraudCheckRequest request = new FraudCheckRequest(
-                        "192.168.1.100",
-                        "java-webclient-test",
-                        15,     // 15ms reaction time (superhuman)
-                        45,     // 45 bids in the last minute (bot behavior)
-                        1,      // New IP address
-                        500.0   // Bid amount
+                        auction.ipAddress(),
+                        auction.userAgent(),
+                        auction.reactionTimeMs(),
+                        auction.bidCountLastMin(),
+                        auction.isNewIp(),
+                        auction.currentPrice()
                 );
 
-                // Call the Python FastAPI microservice
                 return fastApiWebClient.post()
                         .uri("/predict")
                         .bodyValue(request)
@@ -55,8 +59,9 @@ public class AuctionStreamMonitor {
                         .bodyToMono(FraudCheckResponse.class)
                         .flatMap(response -> {
                             if (response.isFraud()) {
+                                String formattedProb = String.format("%.2f", response.fraudProbability() * 100);
                                 log.warn("🚨 AI SENTINEL ALERT: Fraudulent activity detected from user '{}'! Probability: {}%",
-                                        auction.highBidder(), (response.fraudProbability() * 100));
+                                        auction.highBidder(), formattedProb);
 
                                 String payload = auction.id() + ":" + auction.highBidder();
                                 return redisTemplate.convertAndSend("auction:fraud", payload).then();

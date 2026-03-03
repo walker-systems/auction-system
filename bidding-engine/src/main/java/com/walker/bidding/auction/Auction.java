@@ -15,7 +15,14 @@ public record Auction(
         String highBidder,
         Instant endsAt,
         boolean active,
-        int version
+        int version,
+
+        // --- New Telemetry Fields ---
+        String ipAddress,
+        String userAgent,
+        int reactionTimeMs,
+        int bidCountLastMin,
+        int isNewIp
 ) {
     public Auction {
         if (id == null) {
