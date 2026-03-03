@@ -13,6 +13,7 @@ public record Auction(
         String itemId,
         BigDecimal currentPrice,
         String highBidder,
+        // TODO: Fix the formatting and vary the times
         Instant endsAt,
         boolean active,
         int version,

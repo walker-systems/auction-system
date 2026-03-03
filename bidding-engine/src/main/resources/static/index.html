@@ -231,11 +231,14 @@
         fetch(`/api/auctions/${auctionId}/bids`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bidder: username, amount: amount })
+            body: JSON.stringify({ bidder: username, amount: amount, reactionTimeMs: 150 }) // Ensure reactionTime is sent!
         })
             .then(async response => {
                 if (!response.ok) {
-                    showCardToast(auctionId, "Bid Error!", "bg-red-600");
+                    // Extract the RFC 7807 "detail" field from our ProblemDetail
+                    const errorData = await response.json();
+                    const errorMessage = errorData.detail || "Bid Error!";
+                    showCardToast(auctionId, errorMessage, "bg-red-600");
                 } else {
                     showCardToast(auctionId, "Bid Accepted!", "bg-green-600");
                 }
@@ -274,20 +277,32 @@
                 }
                 delete activeAuctions[id];
             } else {
-                const seconds = Math.floor((diff / 1000) % 60);
-                const minutes = Math.floor((diff / 1000 / 60) % 60);
+                // Calculate time units
+                const totalSeconds = Math.floor(diff / 1000);
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
 
+                // Format string: Only show hours if they exist (H:MM:SS), else (MM:SS)
+                let timeStr = "";
+                if (hours > 0) {
+                    timeStr += `${hours}:${minutes.toString().padStart(2, '0')}:`;
+                } else {
+                    timeStr += `${minutes}:`;
+                }
+                timeStr += seconds.toString().padStart(2, '0');
+
+                // Update UI
                 if (diff < 15000) {
-                    timerEl.innerText = `⏳ Closing soon: 0${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    timerEl.innerText = `⏳ Closing soon: ${timeStr}`;
                     timerEl.classList.add("text-red-500");
                 } else {
-                    timerEl.innerText = `Time Left: 0${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    timerEl.innerText = `Time Left: ${timeStr}`;
                     timerEl.classList.remove("text-red-500");
                 }
             }
         }
     }
-
     function showCardToast(auctionId, message, colorClass) {
         const area = document.getElementById(`toast-area-${auctionId}`);
         if (!area) return;

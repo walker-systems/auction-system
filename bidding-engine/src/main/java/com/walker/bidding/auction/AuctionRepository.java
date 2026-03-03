@@ -46,7 +46,7 @@ public class AuctionRepository {
                 local proposedAuction = cjson.decode(proposedAuctionJson)
                 local auctionKey = proposedAuctionKey
                 
-                if databaseAuction.version == (proposedAuction.version - 1) then
+                if tonumber(databaseAuction.version) == (tonumber(proposedAuction.version) - 1) then
                     redis.call('SET', auctionKey, proposedAuctionJson)
                     return true
                 else
@@ -70,8 +70,7 @@ public class AuctionRepository {
                 .map(Message::getMessage);
     }
 
-    // TODO: Tech Debt - Replace template.keys() with Redis SCAN command
-    // or maintain a separate Redis Set of active auction IDs to avoid blocking the DB in prod.
+    // TODO: Tech Debt - Replace template.keys() with Redis SCAN command or maintain a separate Redis Set of active auction IDs to avoid blocking the DB in prod.
     public Flux<Auction> findAll() {
         // Find all keys starting with "auctions:", then fetch the value for each key
         return template.keys("auctions:*")
