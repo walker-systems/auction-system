@@ -1,5 +1,6 @@
 package com.walkersystems.sentinel.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -10,6 +11,7 @@ import java.time.Instant;
 import java.util.List;
 
 @Service
+@Slf4j
 public class RateLimiterService {
 
     private final ReactiveRedisTemplate<String, String> redisTemplate;
@@ -28,17 +30,12 @@ public class RateLimiterService {
      * @param tokensRequested Cost of this specific request (usually 1 token).
      * @return Mono<Boolean> true if allowed, false if denied.
      */
-    public Mono<Boolean> isAllowed(String identifier,
-                                   int tokenCapacity,
-                                   int tokenRefillRate,
-                                   int tokensRequested) {
-        
+    public Mono<Boolean> isAllowed(String identifier, int tokenCapacity, int tokenRefillRate, int tokensRequested) {
         // Check for unfulfillable request
         if (tokensRequested > tokenCapacity) {
-            System.err.println("Request denied: cost (" + tokensRequested +
-                               ") exceeds max token capacity (" + tokenCapacity + ")");
-            return Mono.just(false);
-        }
+            log.warn("⚠️ Request denied: cost ({}) exceeds max token capacity ({})",
+                    tokensRequested, tokenCapacity);
+            return Mono.just(false);        }
         
         var key = "rate_limit:" + identifier;
         var keys = List.of(key);                                     // KEYS[1]

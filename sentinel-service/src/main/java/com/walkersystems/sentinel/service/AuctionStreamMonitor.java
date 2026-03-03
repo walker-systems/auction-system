@@ -53,8 +53,9 @@ public class AuctionStreamMonitor {
                         .bodyToMono(FraudCheckResponse.class)
                         .flatMap(response -> {
                             if (response.isFraud()) {
-                                log.warn("🚨 AI SENTINEL ALERT: Fraudulent activity detected from user '{}'! Probability: String.format(\"%.2f%%\", response.fraudProbability() * 100)",
-                                        auction.highBidder());
+                                String formattedProb = String.format("%.2f", response.fraudProbability() * 100);
+                                log.warn("🚨 AI SENTINEL ALERT: Fraudulent activity detected from user '{}'! Probability: {}%",
+                                        auction.highBidder(), formattedProb);
 
                                 String payload = auction.id() + ":" + auction.highBidder();
                                 return redisTemplate.convertAndSend("auction:fraud", payload).then();
