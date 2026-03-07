@@ -48,4 +48,23 @@ public class AuctionController {
         log.info("Fetching all active auctions for storefront");
         return auctionService.getAllAuctions();
     }
+
+    @PostMapping("/{id}/max-bids")
+    public Mono<Auction> placeMaxBid(
+            @PathVariable String id,
+            @RequestBody MaxBidRequest request) {
+
+        // TODO: For this portfolio demo, we trust the telemetry sent by the client.
+        // In a true production environment, IP and User-Agent would be extracted
+        // securely from the ServerHttpRequest headers, exactly like your standard placeBid.
+
+        return auctionService.placeMaxBid(
+                id,
+                request.bidderId(),
+                request.maxBid(),
+                request.telemetry().ipAddress(),
+                request.telemetry().userAgent(),
+                request.telemetry().reactionTimeMs()
+        );
+    }
 }
