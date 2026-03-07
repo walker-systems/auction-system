@@ -16,36 +16,24 @@ public class RateLimiterService {
 
     private final ReactiveRedisTemplate<String, String> redisTemplate;
 
-    // 1. Added wildcard <?> to satisfy the IDE's raw type warning
     private final RedisScript<List<?>> tokenBucketScript;
 
-    @SuppressWarnings({"rawtypes", "unchecked"}) // Safely ignores the raw List.class cast
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public RateLimiterService(ReactiveRedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
         this.tokenBucketScript = (RedisScript<List<?>>) (RedisScript) RedisScript.of(new ClassPathResource("scripts/token_bucket.lua"), List.class);
     }
 
-    /**
-     * Grant or deny user request (via token_bucket.lua) based on frequency of requests (represented as 'tokens').
-     * @param identifier IP, API Key, or Username/Email; each unique ID is associated with one 'bucket' of tokens.
-     * @param tokenCapacity Maximum number of tokens the bucket can hold (Burst limit).
-     * @param tokenRefillRate Denotes the number of tokens automatically added to the bucket per second.
-     * @param tokensRequested Cost of this specific request (usually 1 token).
-     * @return Mono<Boolean> true if allowed, false if denied.
-     */
     public Mono<Boolean> isAllowed(String identifier, int tokenCapacity, int tokenRefillRate, int tokensRequested) {
 
-        // Check for unfulfillable request
         if (tokensRequested > tokenCapacity) {
             log.warn("⚠️ Request denied: cost ({}) exceeds max token capacity ({})",
                     tokensRequested, tokenCapacity);
             return Mono.just(false);
         }
 
-        // 2. Replaced all 'var' keywords with explicit standard types
         String key = "rate_limit:" + identifier;
         List<String> keys = List.of(key);                                     // KEYS[1]
-
         String rateArg = String.valueOf(tokenRefillRate);                     // ARGV[1]
         String capacityArg = String.valueOf(tokenCapacity);                   // ARGV[2]
         String nowArg = String.valueOf(Instant.now().getEpochSecond());       // ARGV[3]
@@ -56,7 +44,7 @@ public class RateLimiterService {
         return redisTemplate.execute(tokenBucketScript, keys, args)
                 .next()
                 .map(result -> {
-                    Long allowed = (Long) result.getFirst(); // Redis returns a Long
+                    Long allowed = (Long) result.getFirst();
                     return allowed == 1L;
                 });
     }

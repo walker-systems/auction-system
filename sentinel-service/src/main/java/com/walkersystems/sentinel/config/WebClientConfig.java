@@ -10,6 +10,7 @@ public class WebClientConfig {
     @Bean
     public WebClient fastApiWebClient() {
         return WebClient.builder()
+                // TODO: Replace URL with injection from application.yml for real internal DNS name
                 .baseUrl("http://localhost:8000")
                 .build();
     }

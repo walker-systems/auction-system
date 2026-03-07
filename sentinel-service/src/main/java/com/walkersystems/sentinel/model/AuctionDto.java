@@ -9,7 +9,6 @@ public record AuctionDto(
         String highBidder,
         boolean active,
 
-        // --- New Telemetry Fields ---
         String ipAddress,
         String userAgent,
         int reactionTimeMs,

@@ -36,7 +36,6 @@ public class AuctionStreamMonitor {
             try {
                 AuctionDto auction = objectMapper.readValue(rawJson, AuctionDto.class);
 
-                // --- FIX: Ignore system-generated events (like rollbacks) ---
                 if ("System".equals(auction.highBidder())) {
                     return Mono.empty();
                 }
@@ -59,9 +58,9 @@ public class AuctionStreamMonitor {
                         .bodyToMono(FraudCheckResponse.class)
                         .flatMap(response -> {
                             if (response.isFraud()) {
-                                String formattedProb = String.format("%.2f", response.fraudProbability() * 100);
+                                String prob = String.format("%.2f", response.fraudProbability() * 100);
                                 log.warn("🚨 AI SENTINEL ALERT: Fraudulent activity detected from user '{}'! Probability: {}%",
-                                        auction.highBidder(), formattedProb);
+                                        auction.highBidder(), prob);
 
                                 String payload = auction.id() + ":" + auction.highBidder();
                                 return redisTemplate.convertAndSend("auction:fraud", payload).then();

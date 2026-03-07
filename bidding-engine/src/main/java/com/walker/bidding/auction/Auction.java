@@ -17,7 +17,6 @@ public record Auction(
         boolean active,
         int version,
 
-        // --- New Telemetry Fields ---
         String ipAddress,
         String userAgent,
         int reactionTimeMs,

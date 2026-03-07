@@ -3,7 +3,7 @@ package com.walker.bidding.config;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.walker.bidding.auction.Auction;
-import org.jspecify.annotations.NullMarked; // <-- Imported NullMarked
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,12 +24,11 @@ public class RedisConfig {
     public ReactiveRedisTemplate<String, Auction> auctionRedisTemplate(ReactiveRedisConnectionFactory factory) {
 
         ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+
         StringRedisSerializer keySerializer = new StringRedisSerializer();
 
-        RedisSerializer<Auction> valueSerializer = new RedisSerializer<Auction>() {
-
+        RedisSerializer<Auction> valueSerializer = new RedisSerializer<>() {
             @Override
-            // 2. Return type is implicitly non-null now, perfectly matching the parent interface!
             public byte[] serialize(@Nullable Auction auction) throws SerializationException {
                 if (auction == null) return new byte[0];
                 try {

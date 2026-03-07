@@ -18,7 +18,6 @@ public class AuctionService {
 
     private final AuctionRepository auctionRepository;
 
-    // 1. Updated signature to accept Telemetry
     public Mono<Auction> placeBid(String auctionId, String bidder, BigDecimal bidAmount,
                                   String ipAddress, String userAgent, int reactionTimeMs) {
 
@@ -34,26 +33,23 @@ public class AuctionService {
                                 + auction.currentPrice()));
                     }
 
-                    // Simulate Sprint 3 aggregations: Bots (< 100ms reaction) get fake high-velocity metrics
                     int simulatedBidCount = (reactionTimeMs < 100) ? 65 : 1;
                     int simulatedNewIp = (reactionTimeMs < 100) ? 1 : 0;
 
-                    // 2. Add Telemetry to the published Auction DTO
                     Auction updatedAuction = new Auction(
                             auction.id(),
                             auction.itemId(),
                             bidAmount,
                             bidder,
                             auction.endsAt(),
-                            auction.active(),
+                            true,
                             auction.version() + 1,
 
-                            // --- Telemetry Data ---
                             ipAddress,
                             userAgent,
                             reactionTimeMs,
-                            simulatedBidCount, // <-- Swap the hardcoded 1 for our simulated swarm velocity
-                            simulatedNewIp     // <-- Swap the hardcoded 0 for our simulated new IP flag
+                            simulatedBidCount,
+                            simulatedNewIp
                     );
                     return auctionRepository.updateWithVersion(updatedAuction)
                             .flatMap(bidSuccess -> {
@@ -82,15 +78,15 @@ public class AuctionService {
         return auctionRepository.findAll();
     }
 
-    public Mono<Void> revertFraudulentBid(String auctionId, String fraudulentUser) {
+    public Mono<Void> revertFraudulentBid(String auctionId, String fraudUser) {
         return auctionRepository.findById(auctionId)
                 .flatMap(auction -> {
-                    if (fraudulentUser.equals(auction.highBidder())) {
-                        log.warn("⏪ Reverting fraudulent bid on {} by {}", auctionId, fraudulentUser);
+                    if (fraudUser.equals(auction.highBidder())) {
+                        log.warn("⏪ Reverting fraudulent bid on {} by {}", auctionId, fraudUser);
 
+                        // TODO: Make a "getAuction()" method and call it here
                         BigDecimal revertedPrice = auction.currentPrice().subtract(new BigDecimal("10.00"));
 
-                        // 3. The system rollback event also needs the updated constructor
                         Auction revertedAuction = new Auction(
                                 auction.id(),
                                 auction.itemId(),
@@ -100,7 +96,6 @@ public class AuctionService {
                                 auction.active(),
                                 auction.version() + 1,
 
-                                // --- Blank Telemetry for System Actions ---
                                 null,
                                 null,
                                 0,
@@ -110,7 +105,7 @@ public class AuctionService {
 
                         return auctionRepository.updateWithVersion(revertedAuction)
                                 .filter(Boolean::booleanValue)
-                                .flatMap(success -> auctionRepository.publishUpdate(revertedAuction));
+                                .flatMap(_ -> auctionRepository.publishUpdate(revertedAuction));
                     }
                     return Mono.empty();
                 }).then();

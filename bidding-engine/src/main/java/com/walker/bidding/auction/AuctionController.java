@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/auctions")
 @RequiredArgsConstructor
@@ -21,18 +23,18 @@ public class AuctionController {
     @PostMapping("/{id}/bids")
     public Mono<Auction> placeBid(@PathVariable String id,
                                   @Valid @RequestBody BidRequest request,
-                                  ServerHttpRequest httpRequest) { // <-- 1. Inject the request context
+                                  ServerHttpRequest httpRequest) {
 
-        // 2. Extract the Telemetry Data
-        String ipAddress = httpRequest.getRemoteAddress() != null ?
-                httpRequest.getRemoteAddress().getAddress().getHostAddress() : "unknown";
+        // TODO: Update to check X-Forwarded-For to find real user IP instead of .getRemoteAddress()
+        // TODO: Train model to recognize "unknown" ipAddress as a suspicious feature
+        String ipAddress = Optional.ofNullable(httpRequest.getRemoteAddress())
+                .map(addr -> addr.getAddress().getHostAddress())
+                .orElse("unknown");
         String userAgent = httpRequest.getHeaders().getFirst(HttpHeaders.USER_AGENT);
 
         log.info("📡 Received bid on {} for ${} | IP: {} | Agent: {}",
                 id, request.amount(), ipAddress, userAgent);
 
-        // 3. Pass the new data down to the Service Layer
-        // (Note: This will show a red error in your IDE until we update the AuctionService in the next step!)
         return auctionService.placeBid(id, request.bidder(), request.amount(), ipAddress, userAgent, request.reactionTimeMs());
     }
 

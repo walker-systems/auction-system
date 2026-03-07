@@ -1,6 +1,7 @@
 package com.walker.bidding.auction;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.ReactiveSubscription.Message;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -11,10 +12,9 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
-import static reactor.netty.http.HttpConnectionLiveness.log;
-
 @Repository
 @RequiredArgsConstructor
+@Slf4j
 public class AuctionRepository {
 
     private final ReactiveRedisTemplate<String, Auction> template;
@@ -25,7 +25,7 @@ public class AuctionRepository {
 
     public Mono<Auction> save(Auction auction) {
         return template.opsForValue()
-                .set(getKey(auction.id()), auction)
+                .set(getKey(auction.id()), auction) // TODO: .flatMap here to check if it's true/false before continuing
                 .thenReturn(auction);
     }
 
@@ -33,7 +33,6 @@ public class AuctionRepository {
         return template.opsForValue().get(getKey(id));
     }
 
-    // Atomically updates auction only if version matches.
     public Mono<Boolean> updateWithVersion(Auction proposedAuction) {
         String lua = """
                 local proposedAuctionKey = KEYS[1]
@@ -46,7 +45,7 @@ public class AuctionRepository {
                 local proposedAuction = cjson.decode(proposedAuctionJson)
                 local auctionKey = proposedAuctionKey
                 
-                if databaseAuction.version == (proposedAuction.version - 1) then
+                if tonumber(databaseAuction.version) == (tonumber(proposedAuction.version) - 1) then
                     redis.call('SET', auctionKey, proposedAuctionJson)
                     return true
                 else
@@ -70,18 +69,15 @@ public class AuctionRepository {
                 .map(Message::getMessage);
     }
 
-    // TODO: Tech Debt - Replace template.keys() with Redis SCAN command
-    // or maintain a separate Redis Set of active auction IDs to avoid blocking the DB in prod.
+    // TODO: Replace template.keys() with Redis SCAN command or maintain a separate Redis Set of active auction IDs to avoid blocking the DB in prod.
     public Flux<Auction> findAll() {
-        // Find all keys starting with "auctions:", then fetch the value for each key
         return template.keys("auctions:*")
                 .flatMap(key -> template.opsForValue().get(key));
     }
 
     public Mono<Void> deleteAll() {
         log.info("🗑️ Sweeping the database clean...");
-        // Find all keys that start with "auctions:" and delete them
-        return template.keys("auctions:*")
+        return template.keys("auctions:*") // TODO: Also replace template.keys() here for above reasons
                 .flatMap(template::delete)
                 .then();
     }

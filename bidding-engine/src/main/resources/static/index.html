@@ -150,7 +150,6 @@
 
             if (!auctionState || !priceElement || !bidderElement) return;
 
-            // Halo Logic
             if (cardElement) {
                 if (updatedAuction.highBidder === currentUser && currentUser !== "") {
                     cardElement.classList.add('ring-4', 'ring-yellow-400', 'border-transparent');
@@ -163,7 +162,6 @@
             if (isNaN(endMs)) endMs = parseFloat(updatedAuction.endsAt) * 1000;
             auctionState.endsAt = endMs;
 
-            // Detect Rollback
             if (updatedAuction.currentPrice < auctionState.currentPrice) {
                 showCardToast(auctionId, `Bid Rejected!`, "bg-red-600");
 
@@ -201,7 +199,6 @@
                 }, 400);
 
             }
-            // Normal Update
             else if (updatedAuction.currentPrice > auctionState.currentPrice) {
                 if (updatedAuction.highBidder !== "System") {
                     const bidInput = document.getElementById(`bid-amount-${auctionId}`);
@@ -231,11 +228,13 @@
         fetch(`/api/auctions/${auctionId}/bids`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bidder: username, amount: amount })
+            body: JSON.stringify({ bidder: username, amount: amount, reactionTimeMs: 150 })
         })
             .then(async response => {
                 if (!response.ok) {
-                    showCardToast(auctionId, "Bid Error!", "bg-red-600");
+                    const errorData = await response.json();
+                    const errorMessage = errorData.detail || "Bid Error!";
+                    showCardToast(auctionId, errorMessage, "bg-red-600");
                 } else {
                     showCardToast(auctionId, "Bid Accepted!", "bg-green-600");
                 }
@@ -274,20 +273,29 @@
                 }
                 delete activeAuctions[id];
             } else {
-                const seconds = Math.floor((diff / 1000) % 60);
-                const minutes = Math.floor((diff / 1000 / 60) % 60);
+                const totalSeconds = Math.floor(diff / 1000);
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+
+                let timeStr = "";
+                if (hours > 0) {
+                    timeStr += `${hours}:${minutes.toString().padStart(2, '0')}:`;
+                } else {
+                    timeStr += `${minutes}:`;
+                }
+                timeStr += seconds.toString().padStart(2, '0');
 
                 if (diff < 15000) {
-                    timerEl.innerText = `⏳ Closing soon: 0${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    timerEl.innerText = `⏳ Closing soon: ${timeStr}`;
                     timerEl.classList.add("text-red-500");
                 } else {
-                    timerEl.innerText = `Time Left: 0${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    timerEl.innerText = `Time Left: ${timeStr}`;
                     timerEl.classList.remove("text-red-500");
                 }
             }
         }
     }
-
     function showCardToast(auctionId, message, colorClass) {
         const area = document.getElementById(`toast-area-${auctionId}`);
         if (!area) return;
