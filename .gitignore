@@ -1,33 +1,73 @@
-# =========================
-# Root Workspace Exclusions
-# =========================
+########################################
+# Monorepo root .gitignore
+########################################
 
-# IDEs and Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS Generated Files
+# --- OS ---
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# Python & Machine Learning
-venv/
-__pycache__/
-*.pyc
-.ipynb_checkpoints/
-
-# Data Files 
-*.csv
-*.cbm
-
-# Notebooks / local envs
-sentinel-ml/.venv-notebook/
-
-# JetBrains
+# --- IDEs / Editors ---
+.idea/
+.vscode/
 *.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
 
-# Python environments
+# --- Logs ---
+*.log
 
+# --- Java / Maven / Gradle ---
+**/target/
+**/dependency-reduced-pom.xml
+**/.classpath
+**/.project
+**/.settings/
+**/bin/
+**/out/
+hs_err_pid*
+replay_pid*
+
+# Keep Maven wrapper jar/properties if you use it (usually yes)
+!**/.mvn/wrapper/maven-wrapper.properties
+!**/.mvn/wrapper/maven-wrapper.jar
+!**/mvnw
+!**/mvnw.cmd
+
+# --- Python ---
 **/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+.venv/
+venv/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# If PyCharm/IDE makes these:
+sentinel-ml/.venv-notebook/
+sentinel-ml/.venv-notebook/**
+
+# --- Jupyter / notebooks outputs ---
+**/.ipynb_checkpoints/
+
+# --- ML artifacts / large generated files ---
+# (Recommended: track the generation script + notebook, not the generated outputs)
+*.cbm
+*.csv
+catboost_info/
+catboost_info/**
+
+# If you WANT a small demo CSV tracked, add an exception like:
+# !sentinel-ml/fraud_dataset_sample.csv
+
+# --- Redis persistence artifacts ---
+dump.rdb
+*.rdb
+appendonly.aof
