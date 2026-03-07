@@ -19,12 +19,12 @@ public class RateLimiterTest {
 
     private static final int CAPACITY = 10;
     private static final int REFILL_RATE = 10;
-    private static final int REQUEST_COST = 10;
+    private static final int REQUEST_COST = 1;
 
     @BeforeEach
     public void setup() {
         redisTemplate.execute(conn -> conn.serverCommands().flushAll())
-                .blockLast(); // Make sure data is cleared before running next test
+                .blockLast();
 
     }
 

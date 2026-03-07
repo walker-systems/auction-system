@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
@@ -20,14 +21,13 @@ public class FraudListener {
         log.info("🛡️ Bidding Engine listening for fraud alerts on 'auction:fraud'...");
 
         redisTemplate.listenTo(ChannelTopic.of("auction:fraud"))
-                .subscribe(message -> {
-                    String[] parts = message.getMessage().split(":");
-                    if (parts.length == 2) {
-                        auctionService.revertFraudulentBid(parts[0], parts[1])
-                                .doOnSuccess(v -> log.info("✅ Revert successfully committed to DB and published."))
-                                .doOnError(err -> log.error("Failed to revert bid: ", err))
-                                .subscribe();
-                    }
-                });
+                .map(message -> message.getMessage().split(":"))
+                .filter(parts -> parts.length == 2)
+                .flatMap(parts -> auctionService.revertFraudulentBid(parts[0], parts[1])
+                        .doOnSuccess(_ -> log.info("✅ Revert successfully committed..."))
+                        .doOnError(err -> log.error("Failed to revert bid: ", err))
+                        .onErrorResume(_ -> Mono.empty())
+                )
+                .subscribe();
     }
 }

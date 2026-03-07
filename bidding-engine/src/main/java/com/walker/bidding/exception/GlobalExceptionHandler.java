@@ -1,14 +1,15 @@
 package com.walker.bidding.exception;
 
-import com.walker.bidding.auction.AuctionService;
-import org.springframework.beans.factory.parsing.Problem;
-import com.walker.bidding.exception.ConcurrentBidException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.serializer.SerializationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.support.WebExchangeBindException;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -24,5 +25,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConcurrentBidException.class)
     public ProblemDetail handleConcurrentModification(ConcurrentBidException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "High traffic. Please try again.");
+    }
+
+    @ExceptionHandler(SerializationException.class)
+    public ProblemDetail handleSerializationException(SerializationException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Internal data processing error.");
+    }
+
+    @ExceptionHandler(WebExchangeBindException.class)
+    public ProblemDetail handleValidationException(WebExchangeBindException ex) {
+        String errorMsg = ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                .findFirst()
+                .orElse("Invalid request payload");
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, errorMsg);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleGenericException(Exception ex) {
+        log.error("Unhandled exception: ", ex);
+
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
     }
 }

@@ -23,7 +23,7 @@ public class AuctionController {
     @PostMapping("/{id}/bids")
     public Mono<Auction> placeBid(@PathVariable String id,
                                   @Valid @RequestBody BidRequest request,
-                                  ServerHttpRequest httpRequest) { // <-- 1. Inject the request context
+                                  ServerHttpRequest httpRequest) {
 
         // TODO: Update to check X-Forwarded-For to find real user IP instead of .getRemoteAddress()
         // TODO: Train model to recognize "unknown" ipAddress as a suspicious feature

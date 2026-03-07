@@ -1,6 +1,7 @@
 package com.walker.bidding.auction;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.ReactiveSubscription.Message;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -11,10 +12,9 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
-import static reactor.netty.http.HttpConnectionLiveness.log;
-
 @Repository
 @RequiredArgsConstructor
+@Slf4j
 public class AuctionRepository {
 
     private final ReactiveRedisTemplate<String, Auction> template;
@@ -25,7 +25,7 @@ public class AuctionRepository {
 
     public Mono<Auction> save(Auction auction) {
         return template.opsForValue()
-                .set(getKey(auction.id()), auction)
+                .set(getKey(auction.id()), auction) // TODO: .flatMap here to check if it's true/false before continuing
                 .thenReturn(auction);
     }
 
@@ -77,7 +77,7 @@ public class AuctionRepository {
 
     public Mono<Void> deleteAll() {
         log.info("🗑️ Sweeping the database clean...");
-        return template.keys("auctions:*")
+        return template.keys("auctions:*") // TODO: Also replace template.keys() here for above reasons
                 .flatMap(template::delete)
                 .then();
     }

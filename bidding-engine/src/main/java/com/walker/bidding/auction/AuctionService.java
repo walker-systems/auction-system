@@ -42,7 +42,7 @@ public class AuctionService {
                             bidAmount,
                             bidder,
                             auction.endsAt(),
-                            auction.active(),
+                            true,
                             auction.version() + 1,
 
                             ipAddress,
@@ -78,12 +78,13 @@ public class AuctionService {
         return auctionRepository.findAll();
     }
 
-    public Mono<Void> revertFraudulentBid(String auctionId, String fraudulentUser) {
+    public Mono<Void> revertFraudulentBid(String auctionId, String fraudUser) {
         return auctionRepository.findById(auctionId)
                 .flatMap(auction -> {
-                    if (fraudulentUser.equals(auction.highBidder())) {
-                        log.warn("⏪ Reverting fraudulent bid on {} by {}", auctionId, fraudulentUser);
+                    if (fraudUser.equals(auction.highBidder())) {
+                        log.warn("⏪ Reverting fraudulent bid on {} by {}", auctionId, fraudUser);
 
+                        // TODO: Make a "getAuction()" method and call it here
                         BigDecimal revertedPrice = auction.currentPrice().subtract(new BigDecimal("10.00"));
 
                         Auction revertedAuction = new Auction(
@@ -104,7 +105,7 @@ public class AuctionService {
 
                         return auctionRepository.updateWithVersion(revertedAuction)
                                 .filter(Boolean::booleanValue)
-                                .flatMap(success -> auctionRepository.publishUpdate(revertedAuction));
+                                .flatMap(_ -> auctionRepository.publishUpdate(revertedAuction));
                     }
                     return Mono.empty();
                 }).then();
