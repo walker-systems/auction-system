@@ -75,11 +75,11 @@ public class AuctionRepository {
     }
 
     public Mono<Long> publishUpdate(Auction auction) {
-        return template.convertAndSend("auction:updates", auction);
+        return template.convertAndSend("auction:updates:" + auction.id(), auction);
     }
 
-    public Flux<Auction> observeAuctionUpdates() {
-        return template.listenTo(ChannelTopic.of("auction:updates"))
+    public Flux<Auction> observeAuctionUpdates(String auctionId) {
+        return template.listenTo(ChannelTopic.of("auction:updates:" + auctionId))
                 .map(Message::getMessage);
     }
 
