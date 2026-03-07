@@ -29,7 +29,6 @@ public class RedisConfig {
         RedisSerializer<Auction> valueSerializer = new RedisSerializer<Auction>() {
 
             @Override
-            // 2. Return type is implicitly non-null now, perfectly matching the parent interface!
             public byte[] serialize(@Nullable Auction auction) throws SerializationException {
                 if (auction == null) return new byte[0];
                 try {

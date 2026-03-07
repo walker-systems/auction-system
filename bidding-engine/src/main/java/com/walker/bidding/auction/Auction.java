@@ -13,12 +13,10 @@ public record Auction(
         String itemId,
         BigDecimal currentPrice,
         String highBidder,
-        // TODO: Fix the formatting and vary the times
         Instant endsAt,
         boolean active,
         int version,
 
-        // --- New Telemetry Fields ---
         String ipAddress,
         String userAgent,
         int reactionTimeMs,

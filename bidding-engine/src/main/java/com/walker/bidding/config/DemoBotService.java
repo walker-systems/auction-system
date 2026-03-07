@@ -24,7 +24,7 @@ public class DemoBotService {
 
     private final AuctionService auctionService;
     private final AuctionRepository auctionRepository;
-    private Disposable botTask; // Keeps track of the running background task
+    private Disposable botTask;
 
     private final List<String> AI_PERSONAS = List.of(
             "bot_user_99", "legit_human_dave", "sniper_script_x", "susan_the_buyer",
@@ -58,22 +58,17 @@ public class DemoBotService {
                 .flatMap(activeAuctions -> {
                     if (activeAuctions.isEmpty()) return Mono.empty();
 
-                    // 1. Pick a random auction and persona
                     Auction target = activeAuctions.get(ThreadLocalRandom.current().nextInt(activeAuctions.size()));
                     String botName = AI_PERSONAS.get(ThreadLocalRandom.current().nextInt(AI_PERSONAS.size()));
 
-                    // Generate a random bid increment between $1 and $100
                     int randomIncrement = ThreadLocalRandom.current().nextInt(1, 101);
                     BigDecimal bidAmount = target.currentPrice().add(BigDecimal.valueOf(randomIncrement));
 
-                    // 2. Generate simulated telemetry based on the persona name
-                    // If the name contains "bot" or "script", make it look like a fast machine.
                     boolean isSuspicious = botName.toLowerCase().contains("bot") || botName.toLowerCase().contains("script");
 
                     String ipAddress = isSuspicious ? "192.168.1.99" : "72.14.213.15";
                     String userAgent = isSuspicious ? "python-requests/2.31.0" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/121.0.0.0";
 
-                    // Bots react in 10-50ms (superhuman), humans react in 400-2000ms.
                     int reactionTimeMs = isSuspicious ?
                             ThreadLocalRandom.current().nextInt(10, 51) :
                             ThreadLocalRandom.current().nextInt(400, 2001);
@@ -81,7 +76,6 @@ public class DemoBotService {
                     log.info("🤖 Bot '{}' bidding ${} on {} (Reaction: {}ms)",
                             botName, bidAmount, target.itemId(), reactionTimeMs);
 
-                    // 3. Call the updated service method with all 6 parameters
                     return auctionService.placeBid(
                             target.id(),
                             botName,

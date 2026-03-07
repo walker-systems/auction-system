@@ -26,7 +26,7 @@ public class FraudListener {
                         auctionService.revertFraudulentBid(parts[0], parts[1])
                                 .doOnSuccess(v -> log.info("✅ Revert successfully committed to DB and published."))
                                 .doOnError(err -> log.error("Failed to revert bid: ", err))
-                                .subscribe(); // Empty subscribe kicks off the reactive chain safely
+                                .subscribe();
                     }
                 });
     }

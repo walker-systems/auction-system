@@ -33,7 +33,6 @@ public class AuctionRepository {
         return template.opsForValue().get(getKey(id));
     }
 
-    // Atomically updates auction only if version matches.
     public Mono<Boolean> updateWithVersion(Auction proposedAuction) {
         String lua = """
                 local proposedAuctionKey = KEYS[1]
@@ -70,16 +69,14 @@ public class AuctionRepository {
                 .map(Message::getMessage);
     }
 
-    // TODO: Tech Debt - Replace template.keys() with Redis SCAN command or maintain a separate Redis Set of active auction IDs to avoid blocking the DB in prod.
+    // TODO: Replace template.keys() with Redis SCAN command or maintain a separate Redis Set of active auction IDs to avoid blocking the DB in prod.
     public Flux<Auction> findAll() {
-        // Find all keys starting with "auctions:", then fetch the value for each key
         return template.keys("auctions:*")
                 .flatMap(key -> template.opsForValue().get(key));
     }
 
     public Mono<Void> deleteAll() {
         log.info("🗑️ Sweeping the database clean...");
-        // Find all keys that start with "auctions:" and delete them
         return template.keys("auctions:*")
                 .flatMap(template::delete)
                 .then();

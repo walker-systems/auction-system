@@ -40,18 +40,15 @@ public class DatabaseInitializer implements CommandLineRunner {
     public Mono<Void> resetAndSeedDatabase() {
         log.info("🌱 Wiping old data and seeding database with realistic auctions...");
 
-        // 1. Delete all existing auctions first to prevent duplicates!
         return auctionRepository.deleteAll()
                 .thenMany(Flux.fromIterable(DEMO_ITEMS)
-                        .index() // <-- This adds a sequential number to our stream
-                        // Inside DatabaseInitializer.java -> resetAndSeedDatabase()
+                        .index()
                         .flatMap(tuple -> {
                             long i = tuple.getT1();
                             String itemName = tuple.getT2();
 
                             long startingPrice = 50 + ThreadLocalRandom.current().nextInt(450);
 
-                            // --- NEW: Expiration between 30 seconds and 5 minutes (300 seconds) ---
                             int randomSeconds = ThreadLocalRandom.current().nextInt(30, 120);
                             Instant staggeredExpiration = Instant.now()
                                     .plus(Duration.ofSeconds(randomSeconds));
@@ -61,7 +58,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                                     itemName,
                                     BigDecimal.valueOf(startingPrice),
                                     "System",
-                                    staggeredExpiration, // Use the shortened time!
+                                    staggeredExpiration,
                                     true,
                                     0,
                                     null,

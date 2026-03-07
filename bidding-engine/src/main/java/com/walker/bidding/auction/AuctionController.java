@@ -25,7 +25,6 @@ public class AuctionController {
                                   @Valid @RequestBody BidRequest request,
                                   ServerHttpRequest httpRequest) { // <-- 1. Inject the request context
 
-        // 2. Extract the Telemetry Data
         // TODO: Update to check X-Forwarded-For to find real user IP instead of .getRemoteAddress()
         // TODO: Train model to recognize "unknown" ipAddress as a suspicious feature
         String ipAddress = Optional.ofNullable(httpRequest.getRemoteAddress())
@@ -36,7 +35,6 @@ public class AuctionController {
         log.info("📡 Received bid on {} for ${} | IP: {} | Agent: {}",
                 id, request.amount(), ipAddress, userAgent);
 
-        // 3. Pass the new data down to the Service Layer
         return auctionService.placeBid(id, request.bidder(), request.amount(), ipAddress, userAgent, request.reactionTimeMs());
     }
 

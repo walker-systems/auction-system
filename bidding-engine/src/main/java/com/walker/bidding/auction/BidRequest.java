@@ -13,6 +13,5 @@ public record BidRequest(
         @DecimalMin(value = "0.01", message = "Bid must be greater than zero")
         BigDecimal amount,
 
-        // --- New Telemetry Field from Frontend ---
         int reactionTimeMs
 ) {}

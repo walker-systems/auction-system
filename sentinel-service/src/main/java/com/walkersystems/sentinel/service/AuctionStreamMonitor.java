@@ -36,7 +36,6 @@ public class AuctionStreamMonitor {
             try {
                 AuctionDto auction = objectMapper.readValue(rawJson, AuctionDto.class);
 
-                // --- FIX: Ignore system-generated events (like rollbacks) ---
                 if ("System".equals(auction.highBidder())) {
                     return Mono.empty();
                 }
