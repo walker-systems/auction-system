@@ -70,7 +70,8 @@ public class AuctionService {
     }
 
     public Flux<Auction> streamAuctionUpdates(String auctionId) {
-        return auctionRepository.observeAuctionUpdates(auctionId);
+        return auctionRepository.observeAuctionUpdates(auctionId)
+                .sample(Duration.ofMillis(100));
     }
 
     public Flux<Auction> getAllAuctions() {
