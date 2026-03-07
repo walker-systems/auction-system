@@ -39,8 +39,7 @@ public class AuctionController {
     }
 
     @GetMapping(value = "/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<Auction> streamLiveBids(@PathVariable String id) {
-        log.info("Client connected to live stream for auction {}", id);
+    public Flux<Auction> streamAuctionUpdates(@PathVariable String id) {
         return auctionService.streamAuctionUpdates(id);
     }
 

@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -24,9 +25,9 @@ public class AuctionStreamMonitor {
 
     @PostConstruct
     public void startMonitoring() {
-        log.info("🛡️ Sentinel Stream Monitor starting... listening to 'auction:updates'");
+        log.info("🛡️ Sentinel Stream Monitor starting... listening to 'auction:updates:*'");
 
-        redisTemplate.listenTo(ChannelTopic.of("auction:updates"))
+        redisTemplate.listenTo(PatternTopic.of("auction:updates:*"))
                 .flatMap(message -> analyzeBidWithAI(message.getMessage()))
                 .subscribe();
     }
