@@ -4,9 +4,7 @@ server:
 spring:
   application:
     name: sentinel-service
-  docker:
-    compose:
-      file: ../compose.yml
+
   data:
     redis:
       host: localhost
