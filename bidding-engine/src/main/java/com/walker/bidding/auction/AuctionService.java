@@ -114,8 +114,19 @@ public class AuctionService {
     public Mono<Auction> placeMaxBid(String auctionId, String bidderId, BigDecimal maxBid,
                                      String ipAddress, String userAgent, int reactionTimeMs) {
 
-        // TODO: PB-303 - Call the Redis ZSET Lua Engine here.
-        // For now, return a placeholder error so the API contract is solid.
-        return Mono.error(new UnsupportedOperationException("Proxy Bidding Engine coming in PB-303!"));
+        int simulatedBidCount = (reactionTimeMs < 100) ? 65 : 1;
+        int simulatedNewIp = (reactionTimeMs < 100) ? 1 : 0;
+
+        return auctionRepository.placeProxyBid(
+                        auctionId, bidderId, maxBid,
+                        ipAddress, userAgent, reactionTimeMs,
+                        simulatedBidCount, simulatedNewIp
+                )
+                .flatMap(updatedAuction -> {
+                    log.info("📈 Proxy bid evaluated. Winner: {}, Visible Price: ${}",
+                            updatedAuction.highBidder(), updatedAuction.currentPrice());
+                    return auctionRepository.publishUpdate(updatedAuction)
+                            .thenReturn(updatedAuction);
+                });
     }
 }

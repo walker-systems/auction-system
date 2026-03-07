@@ -10,8 +10,11 @@ import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 @Repository
 @RequiredArgsConstructor
@@ -108,5 +111,111 @@ public class AuctionRepository {
             return stringTemplate.opsForSet().add(ACTIVE_AUCTIONS_KEY, auction.id());
         }
         return stringTemplate.opsForSet().remove(ACTIVE_AUCTIONS_KEY, auction.id());
+    }
+
+    public Mono<Auction> placeProxyBid(String auctionId, String bidderId, BigDecimal maxBid,
+                                       String ipAddress, String userAgent, int reactionTimeMs,
+                                       int simulatedBidCount, int simulatedNewIp) {
+
+        String lua = """
+                local auctionKey = KEYS[1]
+                local maxBidsKey = KEYS[2]
+                
+                local bidderId = ARGV[1]
+                local maxBid = tonumber(ARGV[2])
+                local ipAddress = ARGV[3]
+                local userAgent = ARGV[4]
+                local reactionTimeMs = tonumber(ARGV[5])
+                local simulatedBidCount = tonumber(ARGV[6])
+                local simulatedNewIp = tonumber(ARGV[7])
+                
+                local auctionJson = redis.call('GET', auctionKey)
+                if not auctionJson then return '{"error":"Auction not found"}' end
+                local auction = cjson.decode(auctionJson)
+                
+                if not auction.active then return '{"error":"Auction is closed"}' end
+                
+                local function get_increment(price)
+                    if price < 10.0 then return 0.50
+                    elseif price < 50.0 then return 1.00
+                    elseif price < 100.0 then return 5.00
+                    elseif price < 500.0 then return 10.00
+                    elseif price < 1000.0 then return 25.00
+                    else return 50.00 end
+                end
+                
+                local currentPrice = tonumber(auction.currentPrice)
+                local minNextBid = currentPrice + get_increment(currentPrice)
+                
+                if auction.highBidder ~= bidderId and maxBid < minNextBid then
+                    return '{"error":"Bid must be at least $' .. string.format("%.2f", minNextBid) .. '"}'
+                end
+                
+                local existingMax = tonumber(redis.call('ZSCORE', maxBidsKey, bidderId) or 0)
+                if maxBid <= existingMax then
+                    return '{"error":"Max bid must be higher than your current max bid"}'
+                end
+                
+                redis.call('ZADD', maxBidsKey, maxBid, bidderId)
+                
+                local top2 = redis.call('ZREVRANGE', maxBidsKey, 0, 1, 'WITHSCORES')
+                local highestBidder = top2[1]
+                local highestMax = tonumber(top2[2])
+                local newVisiblePrice = currentPrice
+                
+                if #top2 == 2 then
+                    newVisiblePrice = currentPrice
+                elseif #top2 == 4 then
+                    local secondHighestMax = tonumber(top2[4])
+                    local incrementedSecond = secondHighestMax + get_increment(secondHighestMax)
+                
+                    if incrementedSecond > highestMax then
+                        newVisiblePrice = highestMax
+                    else
+                        newVisiblePrice = incrementedSecond
+                    end
+                end
+                
+                auction.highBidder = highestBidder
+                auction.currentPrice = newVisiblePrice
+                auction.version = tonumber(auction.version) + 1
+                
+                auction.ipAddress = ipAddress
+                auction.userAgent = userAgent
+                auction.reactionTimeMs = reactionTimeMs
+                auction.bidCountLastMin = simulatedBidCount
+                auction.isNewIp = simulatedNewIp
+                
+                local updatedJson = cjson.encode(auction)
+                redis.call('SET', auctionKey, updatedJson)
+                
+                return updatedJson
+                """;
+
+        return stringTemplate.execute(
+                RedisScript.of(lua, String.class),
+                List.of(getKey(auctionId), getKey(auctionId) + ":max_bids"), // KEYS[1], KEYS[2]
+                List.of(
+                        bidderId,
+                        maxBid.toString(),
+                        ipAddress != null ? ipAddress : "",
+                        userAgent != null ? userAgent : "",
+                        String.valueOf(reactionTimeMs),
+                        String.valueOf(simulatedBidCount),
+                        String.valueOf(simulatedNewIp)
+                )
+        ).next().flatMap(result -> {
+            if (result.startsWith("{\"error\"")) {
+                String errMsg = result.split("\"")[3];
+                return Mono.error(new IllegalArgumentException(errMsg));
+            }
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                mapper.registerModule(new JavaTimeModule());
+                return Mono.just(mapper.readValue(result, Auction.class));
+            } catch (Exception e) {
+                return Mono.error(new RuntimeException("Failed to deserialize proxy bid result", e));
+            }
+        });
     }
 }
