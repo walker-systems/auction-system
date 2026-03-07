@@ -21,3 +21,13 @@ __pycache__/
 # Data Files 
 *.csv
 *.cbm
+
+# Notebooks / local envs
+sentinel-ml/.venv-notebook/
+
+# JetBrains
+*.iml
+
+# Python environments
+
+**/__pycache__/
