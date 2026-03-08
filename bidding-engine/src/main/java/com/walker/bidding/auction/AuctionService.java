@@ -3,6 +3,7 @@ package com.walker.bidding.auction;
 import com.walker.bidding.exception.ConcurrentBidException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -17,56 +18,91 @@ import java.time.Duration;
 public class AuctionService {
 
     private final AuctionRepository auctionRepository;
+    private final ReactiveRedisTemplate<String, String> redisTemplate;
 
     public Mono<Auction> placeBid(String auctionId, String bidder, BigDecimal bidAmount,
                                   String ipAddress, String userAgent, int reactionTimeMs) {
 
-        return auctionRepository.findById(auctionId)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("Auction not found: " + auctionId)))
-                .flatMap(auction -> {
-
-                    if (!auction.active()) {
-                        return Mono.error(new IllegalStateException("Auction is closed."));
-                    }
-                    if (bidAmount.compareTo(auction.currentPrice()) <= 0) {
-                        return Mono.error(new IllegalArgumentException("Bid must be higher than the current price of "
-                                + auction.currentPrice()));
+        return redisTemplate.opsForSet().isMember("banned_users", bidder)
+                .flatMap(isBanned -> {
+                    if (isBanned) {
+                        log.error("🚫 Access Denied: Banned user '{}' attempted to bid on auction {}", bidder, auctionId);
+                        return Mono.error(new IllegalAccessException("User is banned for fraudulent activity."));
                     }
 
-                    int simulatedBidCount = (reactionTimeMs < 100) ? 65 : 1;
-                    int simulatedNewIp = (reactionTimeMs < 100) ? 1 : 0;
+                    return auctionRepository.findById(auctionId)
+                            .switchIfEmpty(Mono.error(new IllegalArgumentException("Auction not found: " + auctionId)))
+                            .flatMap(auction -> {
 
-                    Auction updatedAuction = new Auction(
-                            auction.id(),
-                            auction.itemId(),
-                            bidAmount,
-                            bidder,
-                            auction.endsAt(),
-                            true,
-                            auction.version() + 1,
-
-                            ipAddress,
-                            userAgent,
-                            reactionTimeMs,
-                            simulatedBidCount,
-                            simulatedNewIp
-                    );
-                    return auctionRepository.updateWithVersion(updatedAuction)
-                            .flatMap(bidSuccess -> {
-                                if (bidSuccess) {
-                                    log.info("✅ Bid placed successfully by {} for ${}", bidder, bidAmount);
-                                    return auctionRepository.publishUpdate(updatedAuction)
-                                            .thenReturn(updatedAuction);
-                                } else {
-                                    log.warn("⚠️ Collision detected for auction "
-                                            + "{}. Someone else bid at the exact same time!", auctionId);
-                                    return Mono.error(new ConcurrentBidException("Bid collision"));
+                                if (!auction.active()) {
+                                    return Mono.error(new IllegalStateException("Auction is closed."));
                                 }
+                                if (bidAmount.compareTo(auction.currentPrice()) <= 0) {
+                                    return Mono.error(new IllegalArgumentException("Bid must be higher than the current price of "
+                                            + auction.currentPrice()));
+                                }
+
+                                int simulatedBidCount = (reactionTimeMs < 100) ? 65 : 1;
+                                int simulatedNewIp = (reactionTimeMs < 100) ? 1 : 0;
+
+                                Auction updatedAuction = new Auction(
+                                        auction.id(),
+                                        auction.itemId(),
+                                        bidAmount,
+                                        bidder,
+                                        auction.endsAt(),
+                                        true,
+                                        auction.version() + 1,
+                                        ipAddress,
+                                        userAgent,
+                                        reactionTimeMs,
+                                        simulatedBidCount,
+                                        simulatedNewIp
+                                );
+                                return auctionRepository.updateWithVersion(updatedAuction)
+                                        .flatMap(bidSuccess -> {
+                                            if (bidSuccess) {
+                                                log.info("✅ Bid placed successfully by {} for ${}", bidder, bidAmount);
+                                                return auctionRepository.publishUpdate(updatedAuction)
+                                                        .thenReturn(updatedAuction);
+                                            } else {
+                                                log.warn("⚠️ Collision detected for auction "
+                                                        + "{}. Someone else bid at the exact same time!", auctionId);
+                                                return Mono.error(new ConcurrentBidException("Bid collision"));
+                                            }
+                                        });
                             });
                 })
                 .retryWhen(Retry.backoff(3, Duration.ofMillis(50))
                         .filter(throwable -> throwable instanceof ConcurrentBidException)
                 );
+    }
+
+    public Mono<Auction> placeMaxBid(String auctionId, String bidderId, BigDecimal maxBid,
+                                     String ipAddress, String userAgent, int reactionTimeMs) {
+
+        return redisTemplate.opsForSet().isMember("banned_users", bidderId)
+                .flatMap(isBanned -> {
+                    if (isBanned) {
+                        log.error("🚫 Access Denied: Banned user '{}' attempted proxy bid on {}", bidderId, auctionId);
+                        return Mono.error(new IllegalAccessException("User is banned for fraudulent activity."));
+                    }
+
+                    int simulatedBidCount = (reactionTimeMs < 100) ? 65 : 1;
+                    int simulatedNewIp = (reactionTimeMs < 100) ? 1 : 0;
+
+                    return auctionRepository.placeProxyBid(
+                                    auctionId, bidderId, maxBid,
+                                    ipAddress, userAgent, reactionTimeMs,
+                                    simulatedBidCount, simulatedNewIp
+                            )
+                            .flatMap(updatedAuction -> {
+                                log.info("📈 Proxy bid evaluated. Winner: {}, Visible Price: ${}",
+                                        updatedAuction.highBidder(), updatedAuction.currentPrice());
+                                return auctionRepository.publishUpdate(updatedAuction)
+                                        .thenReturn(updatedAuction);
+                            });
+                });
     }
 
     public Flux<Auction> streamAuctionUpdates(String auctionId) {
@@ -79,43 +115,16 @@ public class AuctionService {
     }
 
     public Mono<Void> revertFraudulentBid(String auctionId, String fraudUser) {
-        return auctionRepository.findById(auctionId)
-                .flatMap(auction -> {
-                    if (fraudUser.equals(auction.highBidder())) {
-                        log.warn("⏪ Reverting fraudulent bid on {} by {}", auctionId, fraudUser);
+        log.warn("⏪ Sentinel requested rollback for bot: {} on auction: {}", fraudUser, auctionId);
 
-                        // TODO: Make a "getAuction()" method and call it here
-                        BigDecimal revertedPrice = auction.currentPrice().subtract(new BigDecimal("10.00"));
+        BigDecimal defaultStartingPrice = new BigDecimal("10.00");
 
-                        Auction revertedAuction = new Auction(
-                                auction.id(),
-                                auction.itemId(),
-                                revertedPrice,
-                                "System",
-                                auction.endsAt(),
-                                auction.active(),
-                                auction.version() + 1,
-
-                                null,
-                                null,
-                                0,
-                                0,
-                                0
-                        );
-
-                        return auctionRepository.updateWithVersion(revertedAuction)
-                                .filter(Boolean::booleanValue)
-                                .flatMap(_ -> auctionRepository.publishUpdate(revertedAuction));
-                    }
-                    return Mono.empty();
-                }).then();
-    }
-
-    public Mono<Auction> placeMaxBid(String auctionId, String bidderId, BigDecimal maxBid,
-                                     String ipAddress, String userAgent, int reactionTimeMs) {
-
-        // TODO: PB-303 - Call the Redis ZSET Lua Engine here.
-        // For now, return a placeholder error so the API contract is solid.
-        return Mono.error(new UnsupportedOperationException("Proxy Bidding Engine coming in PB-303!"));
+        return auctionRepository.revertFraudulentBid(auctionId, fraudUser, defaultStartingPrice)
+                .flatMap(revertedAuction -> {
+                    log.info("✅ Rollback complete. True winner restored: {} at ${}",
+                            revertedAuction.highBidder(), revertedAuction.currentPrice());
+                    return auctionRepository.publishUpdate(revertedAuction);
+                })
+                .then();
     }
 }
