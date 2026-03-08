@@ -2,6 +2,8 @@ package com.walkersystems.sentinel.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.math.BigDecimal;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record AuctionDto(
         String id,
@@ -14,5 +16,5 @@ public record AuctionDto(
         int reactionTimeMs,
         int bidCountLastMin,
         int isNewIp,
-        double currentPrice
+        BigDecimal currentPrice
 ) {}

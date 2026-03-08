@@ -31,7 +31,7 @@ public class AuctionStreamMonitor {
                 .subscribe();
     }
 
-    private Mono<Void> analyzeBidWithAI(String rawJson) {
+    Mono<Void> analyzeBidWithAI(String rawJson) {
         return Mono.defer(() -> {
             try {
                 AuctionDto auction = objectMapper.readValue(rawJson, AuctionDto.class);
