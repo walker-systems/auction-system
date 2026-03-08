@@ -218,4 +218,85 @@ public class AuctionRepository {
             }
         });
     }
+
+    public Mono<Auction> revertFraudulentBid(String auctionId, String fraudUser, BigDecimal fallbackBasePrice) {
+        String lua = """
+                local auctionKey = KEYS[1]
+                local maxBidsKey = KEYS[2]
+                local fraudUser = ARGV[1]
+                local fallbackPrice = tonumber(ARGV[2])
+                
+                local auctionJson = redis.call('GET', auctionKey)
+                if not auctionJson then return '{"error":"Auction not found"}' end
+                local auction = cjson.decode(auctionJson)
+                
+                -- 2. Terminate the bot from the vault!
+                redis.call('ZREM', maxBidsKey, fraudUser)
+                
+                -- 3. Tiered Increment Logic
+                local function get_increment(price)
+                    if price < 10.0 then return 0.50
+                    elseif price < 50.0 then return 1.00
+                    elseif price < 100.0 then return 5.00
+                    elseif price < 500.0 then return 10.00
+                    elseif price < 1000.0 then return 25.00
+                    else return 50.00 end
+                end
+                
+                -- 4. Recompute Top 2 Bidders
+                local top2 = redis.call('ZREVRANGE', maxBidsKey, 0, 1, 'WITHSCORES')
+                local highestBidder = cjson.null
+                local newVisiblePrice = fallbackPrice
+                if #top2 > 0 then
+                    highestBidder = top2[1]
+                    local highestMax = tonumber(top2[2])
+                
+                    if #top2 == 4 then
+                        local secondHighestMax = tonumber(top2[4])
+                        local incrementedSecond = secondHighestMax + get_increment(secondHighestMax)
+                
+                        if incrementedSecond > highestMax then
+                            newVisiblePrice = highestMax
+                        else
+                            newVisiblePrice = incrementedSecond
+                        end
+                    end
+                end
+                
+                -- 5. Update JSON State
+                auction.highBidder = highestBidder
+                auction.currentPrice = newVisiblePrice
+                auction.version = tonumber(auction.version) + 1
+                
+                -- Scrub telemetry since this is a system action
+                auction.ipAddress = cjson.null
+                auction.userAgent = cjson.null
+                auction.reactionTimeMs = 0
+                auction.bidCountLastMin = 0
+                auction.isNewIp = 0
+                
+                local updatedJson = cjson.encode(auction)
+                redis.call('SET', auctionKey, updatedJson)
+                
+                return updatedJson
+                """;
+
+        return stringTemplate.execute(
+                RedisScript.of(lua, String.class),
+                List.of(getKey(auctionId), getKey(auctionId) + ":max_bids"),
+                List.of(fraudUser, fallbackBasePrice.toString()) // Pass it here!
+        ).next().flatMap(result -> {
+            if (result.startsWith("{\"error\"")) {
+                String errMsg = result.split("\"")[3];
+                return Mono.error(new IllegalArgumentException(errMsg));
+            }
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+                return Mono.just(mapper.readValue(result, Auction.class));
+            } catch (Exception e) {
+                return Mono.error(new RuntimeException("Failed to deserialize rollback result", e));
+            }
+        });
+    }
 }

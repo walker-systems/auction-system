@@ -37,7 +37,7 @@ public class AuctionStreamMonitor {
             try {
                 AuctionDto auction = objectMapper.readValue(rawJson, AuctionDto.class);
 
-                if ("System".equals(auction.highBidder())) {
+                if (auction.highBidder() == null || "System".equals(auction.highBidder())) {
                     return Mono.empty();
                 }
 

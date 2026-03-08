@@ -79,38 +79,18 @@ public class AuctionService {
     }
 
     public Mono<Void> revertFraudulentBid(String auctionId, String fraudUser) {
-        return auctionRepository.findById(auctionId)
-                .flatMap(auction -> {
-                    if (fraudUser.equals(auction.highBidder())) {
-                        log.warn("⏪ Reverting fraudulent bid on {} by {}", auctionId, fraudUser);
+        log.warn("⏪ Sentinel requested rollback for bot: {} on auction: {}", fraudUser, auctionId);
 
-                        // TODO: Make a "getAuction()" method and call it here
-                        BigDecimal revertedPrice = auction.currentPrice().subtract(new BigDecimal("10.00"));
+        BigDecimal defaultStartingPrice = new BigDecimal("10.00");
 
-                        Auction revertedAuction = new Auction(
-                                auction.id(),
-                                auction.itemId(),
-                                revertedPrice,
-                                "System",
-                                auction.endsAt(),
-                                auction.active(),
-                                auction.version() + 1,
-
-                                null,
-                                null,
-                                0,
-                                0,
-                                0
-                        );
-
-                        return auctionRepository.updateWithVersion(revertedAuction)
-                                .filter(Boolean::booleanValue)
-                                .flatMap(_ -> auctionRepository.publishUpdate(revertedAuction));
-                    }
-                    return Mono.empty();
-                }).then();
+        return auctionRepository.revertFraudulentBid(auctionId, fraudUser, defaultStartingPrice)
+                .flatMap(revertedAuction -> {
+                    log.info("✅ Rollback complete. True winner restored: {} at ${}",
+                            revertedAuction.highBidder(), revertedAuction.currentPrice());
+                    return auctionRepository.publishUpdate(revertedAuction);
+                })
+                .then();
     }
-
     public Mono<Auction> placeMaxBid(String auctionId, String bidderId, BigDecimal maxBid,
                                      String ipAddress, String userAgent, int reactionTimeMs) {
 
