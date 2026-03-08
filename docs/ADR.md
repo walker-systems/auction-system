@@ -139,3 +139,43 @@ A standard `Dockerfile` will be used to containerize the Python ML microservice 
 ### Consequences
 * **Pros:** Guarantees the production container exactly matches the local training environment.
 * **Cons:** Requires manual file maintenance and differs from the Java project's container strategy.
+
+## ADR-011: Atomic Proxy Bidding via Redis Lua Scripts
+
+### Context
+High-concurrency proxy bidding (multiple users setting maximum bids simultaneously) causes race conditions if handled via standard Java read-modify-write operations across the network.
+
+### Decision
+Core bidding logic, including tiered increment calculations and proxy bid resolution, is implemented as a custom Lua script executed directly inside Redis.
+
+### Consequences
+* **Pros:** Guarantees atomic execution and prevents race conditions without the overhead of distributed locks.
+* **Cons:** Business logic is split between Java and Lua, making debugging and maintenance more complex.
+
+---
+
+## ADR-012: Integration Testing via Testcontainers
+
+### Context
+Core database operations rely heavily on custom Redis Lua scripts. These scripts cannot be accurately simulated using standard Java mock objects (like Mockito) during testing.
+
+### Decision
+Testcontainers is adopted for integration tests, spinning up ephemeral Redis Stack Docker containers during the test lifecycle.
+
+### Consequences
+* **Pros:** Verifies actual database and script behavior against a real, isolated Redis engine.
+* **Cons:** Increases test suite execution time and requires Docker to be running on the host machine.
+
+---
+
+## ADR-013: Epoch Timestamps for Cross-Boundary Time Math
+
+### Context
+The anti-sniping "soft close" feature requires comparing and extending auction end times inside a Redis Lua script. Passing Java `Instant` objects natively caused serialization and comparison mismatches between JSON strings and numeric database formats.
+
+### Decision
+Time thresholds are calculated as Epoch seconds in Java and passed to Lua scripts as numeric values for direct mathematical comparison.
+
+### Consequences
+* **Pros:** Eliminates date parsing errors and guarantees precise, cross-boundary time comparisons.
+* **Cons:** Requires manual conversion to and from epoch seconds when invoking database scripts.
