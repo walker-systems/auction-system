@@ -8,7 +8,6 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -63,8 +62,11 @@ public class AuctionStreamMonitor {
                                 log.warn("🚨 AI SENTINEL ALERT: Fraudulent activity detected from user '{}'! Probability: {}%",
                                         auction.highBidder(), prob);
 
-                                String payload = auction.id() + ":" + auction.highBidder();
-                                return redisTemplate.convertAndSend("auction:fraud", payload).then();
+                                return redisTemplate.opsForSet().add("banned_users", auction.highBidder())
+                                        .then(Mono.defer(() -> {
+                                            String payload = auction.id() + ":" + auction.highBidder();
+                                            return redisTemplate.convertAndSend("auction:fraud", payload).then();
+                                        }));
                             } else {
                                 log.info("✅ AI Sentinel cleared user '{}'.", auction.highBidder());
                                 return Mono.empty();

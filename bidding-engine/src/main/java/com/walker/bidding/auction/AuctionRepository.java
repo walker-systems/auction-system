@@ -230,10 +230,8 @@ public class AuctionRepository {
                 if not auctionJson then return '{"error":"Auction not found"}' end
                 local auction = cjson.decode(auctionJson)
                 
-                -- 2. Terminate the bot from the vault!
                 redis.call('ZREM', maxBidsKey, fraudUser)
                 
-                -- 3. Tiered Increment Logic
                 local function get_increment(price)
                     if price < 10.0 then return 0.50
                     elseif price < 50.0 then return 1.00
@@ -243,7 +241,6 @@ public class AuctionRepository {
                     else return 50.00 end
                 end
                 
-                -- 4. Recompute Top 2 Bidders
                 local top2 = redis.call('ZREVRANGE', maxBidsKey, 0, 1, 'WITHSCORES')
                 local highestBidder = cjson.null
                 local newVisiblePrice = fallbackPrice
@@ -263,12 +260,10 @@ public class AuctionRepository {
                     end
                 end
                 
-                -- 5. Update JSON State
                 auction.highBidder = highestBidder
                 auction.currentPrice = newVisiblePrice
                 auction.version = tonumber(auction.version) + 1
                 
-                -- Scrub telemetry since this is a system action
                 auction.ipAddress = cjson.null
                 auction.userAgent = cjson.null
                 auction.reactionTimeMs = 0
