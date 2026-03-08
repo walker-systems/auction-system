@@ -128,6 +128,7 @@ public class AuctionRepository {
                 local reactionTimeMs = tonumber(ARGV[5])
                 local simulatedBidCount = tonumber(ARGV[6])
                 local simulatedNewIp = tonumber(ARGV[7])
+                local softCloseThreshold = tonumber(ARGV[8])
                 
                 local auctionJson = redis.call('GET', auctionKey)
                 if not auctionJson then return '{"error":"Auction not found"}' end
@@ -186,15 +187,22 @@ public class AuctionRepository {
                 auction.bidCountLastMin = simulatedBidCount
                 auction.isNewIp = simulatedNewIp
                 
+                if auction.endsAt and auction.endsAt < softCloseThreshold then
+                    auction.endsAt = softCloseThreshold
+                end
+                
                 local updatedJson = cjson.encode(auction)
                 redis.call('SET', auctionKey, updatedJson)
                 
                 return updatedJson
                 """;
 
+        double softCloseEpochSeconds = java.time.Instant.now().plusSeconds(60).toEpochMilli() / 1000.0;
+        String softCloseStr = String.valueOf(softCloseEpochSeconds);
+
         return stringTemplate.execute(
                 RedisScript.of(lua, String.class),
-                List.of(getKey(auctionId), getKey(auctionId) + ":max_bids"), // KEYS[1], KEYS[2]
+                List.of(getKey(auctionId), getKey(auctionId) + ":max_bids"),
                 List.of(
                         bidderId,
                         maxBid.toString(),
@@ -202,7 +210,8 @@ public class AuctionRepository {
                         userAgent != null ? userAgent : "",
                         String.valueOf(reactionTimeMs),
                         String.valueOf(simulatedBidCount),
-                        String.valueOf(simulatedNewIp)
+                        String.valueOf(simulatedNewIp),
+                        softCloseStr
                 )
         ).next().flatMap(result -> {
             if (result.startsWith("{\"error\"")) {

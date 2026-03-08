@@ -62,4 +62,38 @@ class AuctionServiceIntegrationTest {
                                 auction.currentPrice().compareTo(new BigDecimal("55.00")) == 0)
                 .verifyComplete();
     }
+
+    @Test
+    void testSoftClose_extendsAuctionEndTime_whenBidPlacedNearEnd() {
+        String testAuctionId = "test-auc-softclose";
+
+        // 1. Set the auction to end in exactly 30 seconds
+        Instant originalEndTime = Instant.now().plus(Duration.ofSeconds(30));
+
+        Auction newAuction = new Auction(
+                testAuctionId,
+                "Sniper Bait",
+                new BigDecimal("10.00"),
+                "System",
+                originalEndTime,
+                true,
+                0,
+                null,
+                null,
+                0,
+                0,
+                0
+        );
+
+        Mono<Auction> bidProcess = auctionRepository.save(newAuction)
+                .then(auctionService.placeMaxBid(
+                        testAuctionId, "sniper_sam", new BigDecimal("50.00"), "127.0.0.1", "TestAgent", 500));
+
+        StepVerifier.create(bidProcess)
+                .expectNextMatches(auction ->
+                        auction.highBidder().equals("sniper_sam") &&
+                                auction.endsAt().isAfter(originalEndTime.plusSeconds(10))
+                )
+                .verifyComplete();
+    }
 }
