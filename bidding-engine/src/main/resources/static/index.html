@@ -54,8 +54,16 @@
                 auctions.forEach(auction => {
                     createAuctionCard(auction, grid);
 
-                    let endMs = new Date(auction.endsAt).getTime();
-                    if (isNaN(endMs)) endMs = parseFloat(auction.endsAt) * 1000;
+                    let endMs;
+                    const rawTime = auction.endsAt;
+
+                    if (typeof rawTime === 'number') {
+                        endMs = rawTime * 1000;
+                    } else if (typeof rawTime === 'string' && !rawTime.includes('-')) {
+                        endMs = parseFloat(rawTime) * 1000;
+                    } else {
+                        endMs = new Date(rawTime).getTime();
+                    }
 
                     activeAuctions[auction.id] = {
                         endsAt: endMs,
@@ -117,7 +125,7 @@
                     Time Left: Loading...
                 </div>
                 <p class="text-sm text-gray-500 mb-4">
-                    Highest Bidder: <span id="bidder-${auction.id}" class="font-semibold text-gray-700 transition-all duration-500 opacity-100">${auction.highBidder}</span>
+                    Highest Bidder: <span id="bidder-${auction.id}" class="font-semibold text-gray-700 transition-all duration-500 opacity-100">${auction.highBidder || 'System'}</span>
                 </p>
             </div>
 
@@ -158,8 +166,17 @@
                 }
             }
 
-            let endMs = new Date(updatedAuction.endsAt).getTime();
-            if (isNaN(endMs)) endMs = parseFloat(updatedAuction.endsAt) * 1000;
+            let endMs;
+            const rawTime = updatedAuction.endsAt;
+
+            if (typeof rawTime === 'number') {
+                endMs = rawTime * 1000;
+            } else if (typeof rawTime === 'string' && !rawTime.includes('-')) {
+                endMs = parseFloat(rawTime) * 1000;
+            } else {
+                endMs = new Date(rawTime).getTime();
+            }
+
             auctionState.endsAt = endMs;
 
             if (updatedAuction.currentPrice < auctionState.currentPrice) {
@@ -177,7 +194,7 @@
                     priceElement.classList.add('text-red-600');
                     priceElement.classList.remove('opacity-0');
 
-                    bidderElement.innerText = updatedAuction.highBidder;
+                    bidderElement.innerText = updatedAuction.highBidder || 'System';
                     bidderElement.classList.remove('text-gray-700');
                     bidderElement.classList.add('text-red-600');
                     bidderElement.classList.remove('opacity-0');
@@ -197,12 +214,14 @@
                         }, 400);
                     }, 2000);
                 }, 400);
-
             }
-            else if (updatedAuction.currentPrice > auctionState.currentPrice) {
-                if (updatedAuction.highBidder !== "System") {
+            else if (updatedAuction.currentPrice > auctionState.currentPrice || updatedAuction.highBidder !== bidderElement.innerText) {
+
+                if (updatedAuction.currentPrice > auctionState.currentPrice) {
                     const bidInput = document.getElementById(`bid-amount-${auctionId}`);
-                    if(bidInput) bidInput.value = updatedAuction.currentPrice + 10;
+                    if(bidInput && parseFloat(bidInput.value) <= updatedAuction.currentPrice) {
+                        bidInput.value = updatedAuction.currentPrice + 10;
+                    }
                 }
 
                 priceElement.classList.add('opacity-0');
@@ -210,25 +229,35 @@
 
                 setTimeout(() => {
                     priceElement.innerText = `$${updatedAuction.currentPrice.toFixed(2)}`;
-                    bidderElement.innerText = updatedAuction.highBidder;
+                    bidderElement.innerText = updatedAuction.highBidder || 'System';
 
                     priceElement.classList.remove('opacity-0');
                     bidderElement.classList.remove('opacity-0');
                 }, 400);
             }
-
             auctionState.currentPrice = updatedAuction.currentPrice;
         };
     }
 
     function placeBid(auctionId) {
         const username = document.getElementById(`username-${auctionId}`).value;
-        const amount = document.getElementById(`bid-amount-${auctionId}`).value;
+        const bidInput = document.getElementById(`bid-amount-${auctionId}`);
+        const amount = bidInput.value;
 
-        fetch(`/api/auctions/${auctionId}/bids`, {
+        const payload = {
+            bidderId: username,
+            maxBid: parseFloat(amount),
+            telemetry: {
+                ipAddress: "127.0.0.1",
+                userAgent: navigator.userAgent,
+                reactionTimeMs: Math.floor(Math.random() * (300 - 100 + 1) + 100)
+            }
+        };
+
+        fetch(`/api/auctions/${auctionId}/max-bids`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bidder: username, amount: amount, reactionTimeMs: 150 })
+            body: JSON.stringify(payload)
         })
             .then(async response => {
                 if (!response.ok) {
@@ -237,6 +266,9 @@
                     showCardToast(auctionId, errorMessage, "bg-red-600");
                 } else {
                     showCardToast(auctionId, "Bid Accepted!", "bg-green-600");
+                    if (bidInput) {
+                        bidInput.value = parseFloat(amount) + 10;
+                    }
                 }
             })
             .catch(err => {

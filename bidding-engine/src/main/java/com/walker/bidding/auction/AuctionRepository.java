@@ -103,9 +103,9 @@ public class AuctionRepository {
         return stringTemplate.scan(options)
                 .flatMap(template::delete)
                 .then(stringTemplate.delete(ACTIVE_AUCTIONS_KEY))
+                .then(stringTemplate.delete("banned_users"))
                 .then();
     }
-
     private Mono<Long> updateActiveAuctionIndex(Auction auction) {
         if (auction.active()) {
             return stringTemplate.opsForSet().add(ACTIVE_AUCTIONS_KEY, auction.id());
@@ -129,12 +129,17 @@ public class AuctionRepository {
                 local simulatedBidCount = tonumber(ARGV[6])
                 local simulatedNewIp = tonumber(ARGV[7])
                 local softCloseThreshold = tonumber(ARGV[8])
+                local currentTime = tonumber(ARGV[9])
                 
                 local auctionJson = redis.call('GET', auctionKey)
                 if not auctionJson then return '{"error":"Auction not found"}' end
                 local auction = cjson.decode(auctionJson)
                 
                 if not auction.active then return '{"error":"Auction is closed"}' end
+                
+                if auction.endsAt and tonumber(auction.endsAt) <= currentTime then
+                    return '{"error":"Auction has already ended!"}'
+                end
                 
                 local function get_increment(price)
                     if price < 10.0 then return 0.50
@@ -187,7 +192,7 @@ public class AuctionRepository {
                 auction.bidCountLastMin = simulatedBidCount
                 auction.isNewIp = simulatedNewIp
                 
-                if auction.endsAt and auction.endsAt < softCloseThreshold then
+                if auction.endsAt and tonumber(auction.endsAt) < softCloseThreshold then
                     auction.endsAt = softCloseThreshold
                 end
                 
@@ -197,8 +202,8 @@ public class AuctionRepository {
                 return updatedJson
                 """;
 
+        double currentEpochSeconds = java.time.Instant.now().toEpochMilli() / 1000.0;
         double softCloseEpochSeconds = java.time.Instant.now().plusSeconds(60).toEpochMilli() / 1000.0;
-        String softCloseStr = String.valueOf(softCloseEpochSeconds);
 
         return stringTemplate.execute(
                 RedisScript.of(lua, String.class),
@@ -211,7 +216,8 @@ public class AuctionRepository {
                         String.valueOf(reactionTimeMs),
                         String.valueOf(simulatedBidCount),
                         String.valueOf(simulatedNewIp),
-                        softCloseStr
+                        String.valueOf(softCloseEpochSeconds),
+                        String.valueOf(currentEpochSeconds)
                 )
         ).next().flatMap(result -> {
             if (result.startsWith("{\"error\"")) {
@@ -251,7 +257,7 @@ public class AuctionRepository {
                 end
                 
                 local top2 = redis.call('ZREVRANGE', maxBidsKey, 0, 1, 'WITHSCORES')
-                local highestBidder = cjson.null
+                local highestBidder = 'System'
                 local newVisiblePrice = fallbackPrice
                 if #top2 > 0 then
                     highestBidder = top2[1]
