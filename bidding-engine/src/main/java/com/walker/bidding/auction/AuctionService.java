@@ -4,6 +4,7 @@ import com.walker.bidding.exception.ConcurrentBidException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -11,6 +12,7 @@ import reactor.util.retry.Retry;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -126,5 +128,34 @@ public class AuctionService {
                     return auctionRepository.publishUpdate(revertedAuction);
                 })
                 .then();
+    }
+
+    @Scheduled(fixedRate = 1000)
+    public void sweepExpiredAuctions() {
+        auctionRepository.findAll()
+                .filter(Auction::active)
+                .filter(auction -> auction.endsAt().isBefore(Instant.now()))
+                .flatMap(auction -> {
+                    log.info("⏰ Auction {} has ended. Closing and removing from storefront.", auction.id());
+
+                    Auction closedAuction = new Auction(
+                            auction.id(),
+                            auction.itemId(),
+                            auction.currentPrice(),
+                            auction.highBidder(),
+                            auction.endsAt(),
+                            false, // 👈 Set active to false
+                            auction.version() + 1,
+                            auction.ipAddress(),
+                            auction.userAgent(),
+                            auction.reactionTimeMs(),
+                            auction.bidCountLastMin(),
+                            auction.isNewIp()
+                    );
+
+                    return auctionRepository.save(closedAuction)
+                            .then(auctionRepository.publishUpdate(closedAuction));
+                })
+                .subscribe();
     }
 }
