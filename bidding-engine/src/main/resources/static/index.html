@@ -14,7 +14,10 @@
             <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Live Storefront</h1>
             <p class="text-gray-600">Powered by Spring WebFlux & Redis</p>
         </div>
-        <div class="space-x-4">
+        <div class="space-x-4 flex items-center">
+            <button id="view-logs-btn" onclick="toggleTerminal()" disabled class="bg-gray-400 text-gray-200 font-mono text-sm py-3 px-6 rounded-lg shadow-lg transition transform cursor-not-allowed">
+                &gt;_ View Logs
+            </button>
             <button id="chaos-btn" onclick="toggleChaos()" class="w-48 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform hover:-translate-y-1">
                 🤖 Start Chaos
             </button>
@@ -32,334 +35,45 @@
     <div id="auction-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     </div>
 </div>
+<footer class="mt-12 py-8 bg-white border-t border-gray-200">
+    <div class="max-w-6xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 text-gray-600">
+        <div>
+            <p class="font-bold text-gray-800 text-lg">Justin Walker</p>
+            <p class="text-sm">Backend Systems Engineer</p>
+            <a href="mailto:justinwalker.contact@gmail.com" class="text-indigo-600 hover:text-indigo-800 text-sm transition-colors">
+                justinwalker.contact@gmail.com
+            </a>
+        </div>
 
-<script>
-    const activeAuctions = {};
-    let clockInterval;
-    let isChaosRunning = false;
-
-    const toastTimers = {};
-
-    document.addEventListener('DOMContentLoaded', () => {
-        loadStorefront();
-    });
-
-    function loadStorefront() {
-        fetch('/api/auctions')
-            .then(response => response.json())
-            .then(auctions => {
-                const grid = document.getElementById('auction-grid');
-                grid.innerHTML = '';
-
-                auctions.forEach(auction => {
-                    createAuctionCard(auction, grid);
-
-                    let endMs;
-                    const rawTime = auction.endsAt;
-
-                    if (typeof rawTime === 'number') {
-                        endMs = rawTime * 1000;
-                    } else if (typeof rawTime === 'string' && !rawTime.includes('-')) {
-                        endMs = parseFloat(rawTime) * 1000;
-                    } else {
-                        endMs = new Date(rawTime).getTime();
-                    }
-
-                    activeAuctions[auction.id] = {
-                        endsAt: endMs,
-                        currentPrice: auction.currentPrice,
-                        timerEl: document.getElementById(`timer-${auction.id}`),
-                        btnEl: document.getElementById(`btn-${auction.id}`)
-                    };
-
-                    connectToLiveStream(auction.id);
-                });
-
-                if (clockInterval) clearInterval(clockInterval);
-                updateClocks();
-                clockInterval = setInterval(updateClocks, 1000);
-            })
-            .catch(err => console.error("Error fetching storefront:", err));
-    }
-
-    // Toggle Button Logic
-    function toggleChaos() {
-        const btn = document.getElementById('chaos-btn');
-        const banner = document.getElementById('chaos-banner');
-
-        if (!isChaosRunning) {
-            fetch('/api/admin/start-bots', { method: 'POST' });
-            isChaosRunning = true;
-            btn.innerHTML = '🛑 Stop Chaos';
-            btn.classList.replace('bg-purple-600', 'bg-red-600');
-            btn.classList.replace('hover:bg-purple-700', 'hover:bg-red-700');
-            banner.classList.remove('hidden');
-        } else {
-            fetch('/api/admin/stop-bots', { method: 'POST' });
-            isChaosRunning = false;
-            btn.innerHTML = '🤖 Start Chaos';
-            btn.classList.replace('bg-red-600', 'bg-purple-600');
-            btn.classList.replace('hover:bg-red-700', 'hover:bg-purple-700');
-            banner.classList.add('hidden');
-        }
-    }
-
-    function resetSystem() {
-        fetch('/api/admin/reset', { method: 'POST' }).then(() => {
-            setTimeout(() => window.location.reload(), 1000);
-        });
-    }
-
-    function createAuctionCard(auction, container) {
-        const card = document.createElement('div');
-        card.className = "relative overflow-hidden bg-white p-6 rounded-xl shadow-md border border-gray-200 transition-all duration-500 transform flex flex-col";
-        card.id = `card-${auction.id}`;
-
-        card.innerHTML = `
-            <div class="flex-grow z-10 relative">
-                <h2 class="text-xl font-bold text-gray-800 mb-2">${auction.itemId}</h2>
-                <div class="text-3xl font-black text-green-500 transition-all duration-500 opacity-100 mb-2" id="price-${auction.id}">
-                    $${auction.currentPrice.toFixed(2)}
-                </div>
-                <div id="timer-${auction.id}" class="text-sm font-bold text-gray-600 mb-4 transition-colors duration-500">
-                    Time Left: Loading...
-                </div>
-                <p class="text-sm text-gray-500 mb-4">
-                    Highest Bidder: <span id="bidder-${auction.id}" class="font-semibold text-gray-700 transition-all duration-500 opacity-100">${auction.highBidder || 'System'}</span>
-                </p>
-            </div>
-
-            <div class="flex space-x-2 mt-auto z-10 relative">
-                <input type="text" id="username-${auction.id}" placeholder="Username" class="w-1/2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="demo_user">
-                <input type="number" id="bid-amount-${auction.id}" placeholder="$$$" class="w-1/4 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="${auction.currentPrice + 10}">
-                <button id="btn-${auction.id}" onclick="placeBid('${auction.id}')" class="w-1/4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition active:scale-95">
-                    Bid
-                </button>
-            </div>
-
-            <div id="toast-area-${auction.id}" class="absolute top-0 left-0 w-full h-full pointer-events-none flex flex-col items-center justify-center z-20"></div>
-        `;
-        container.appendChild(card);
-    }
-
-    function connectToLiveStream(auctionId) {
-        const eventSource = new EventSource(`/api/auctions/${auctionId}/stream`);
-
-        eventSource.onmessage = function(event) {
-            const updatedAuction = JSON.parse(event.data);
-            const auctionState = activeAuctions[updatedAuction.id];
-
-            const cardElement = document.getElementById(`card-${auctionId}`);
-            const priceElement = document.getElementById(`price-${auctionId}`);
-            const bidderElement = document.getElementById(`bidder-${auctionId}`);
-
-            const userElement = document.getElementById(`username-${auctionId}`);
-            const currentUser = userElement ? userElement.value.trim() : "";
-
-            if (!auctionState || !priceElement || !bidderElement) return;
-
-            if (cardElement) {
-                if (updatedAuction.highBidder === currentUser && currentUser !== "") {
-                    cardElement.classList.add('ring-4', 'ring-yellow-400', 'border-transparent');
-                } else {
-                    cardElement.classList.remove('ring-4', 'ring-yellow-400', 'border-transparent');
-                }
-            }
-
-            let endMs;
-            const rawTime = updatedAuction.endsAt;
-
-            if (typeof rawTime === 'number') {
-                endMs = rawTime * 1000;
-            } else if (typeof rawTime === 'string' && !rawTime.includes('-')) {
-                endMs = parseFloat(rawTime) * 1000;
-            } else {
-                endMs = new Date(rawTime).getTime();
-            }
-
-            auctionState.endsAt = endMs;
-
-            if (updatedAuction.currentPrice < auctionState.currentPrice) {
-                showCardToast(auctionId, `Bid Rejected!`, "bg-red-600");
-
-                const bidInput = document.getElementById(`bid-amount-${auctionId}`);
-                if (bidInput) bidInput.value = updatedAuction.currentPrice + 10;
-
-                priceElement.classList.add('opacity-0');
-                bidderElement.classList.add('opacity-0');
-
-                setTimeout(() => {
-                    priceElement.innerText = `$${updatedAuction.currentPrice.toFixed(2)}`;
-                    priceElement.classList.remove('text-green-500');
-                    priceElement.classList.add('text-red-600');
-                    priceElement.classList.remove('opacity-0');
-
-                    bidderElement.innerText = updatedAuction.highBidder || 'System';
-                    bidderElement.classList.remove('text-gray-700');
-                    bidderElement.classList.add('text-red-600');
-                    bidderElement.classList.remove('opacity-0');
-
-                    setTimeout(() => {
-                        priceElement.classList.add('opacity-0');
-                        bidderElement.classList.add('opacity-0');
-
-                        setTimeout(() => {
-                            priceElement.classList.remove('text-red-600');
-                            priceElement.classList.add('text-green-500');
-                            priceElement.classList.remove('opacity-0');
-
-                            bidderElement.classList.remove('text-red-600');
-                            bidderElement.classList.add('text-gray-700');
-                            bidderElement.classList.remove('opacity-0');
-                        }, 400);
-                    }, 2000);
-                }, 400);
-            }
-            else if (updatedAuction.currentPrice > auctionState.currentPrice || updatedAuction.highBidder !== bidderElement.innerText) {
-
-                if (updatedAuction.currentPrice > auctionState.currentPrice) {
-                    const bidInput = document.getElementById(`bid-amount-${auctionId}`);
-                    if(bidInput && parseFloat(bidInput.value) <= updatedAuction.currentPrice) {
-                        bidInput.value = updatedAuction.currentPrice + 10;
-                    }
-                }
-
-                priceElement.classList.add('opacity-0');
-                bidderElement.classList.add('opacity-0');
-
-                setTimeout(() => {
-                    priceElement.innerText = `$${updatedAuction.currentPrice.toFixed(2)}`;
-                    bidderElement.innerText = updatedAuction.highBidder || 'System';
-
-                    priceElement.classList.remove('opacity-0');
-                    bidderElement.classList.remove('opacity-0');
-                }, 400);
-            }
-            auctionState.currentPrice = updatedAuction.currentPrice;
-        };
-    }
-
-    function placeBid(auctionId) {
-        const username = document.getElementById(`username-${auctionId}`).value;
-        const bidInput = document.getElementById(`bid-amount-${auctionId}`);
-        const amount = bidInput.value;
-
-        const payload = {
-            bidderId: username,
-            maxBid: parseFloat(amount),
-            telemetry: {
-                ipAddress: "127.0.0.1",
-                userAgent: navigator.userAgent,
-                reactionTimeMs: Math.floor(Math.random() * (300 - 100 + 1) + 100)
-            }
-        };
-
-        fetch(`/api/auctions/${auctionId}/max-bids`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-            .then(async response => {
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    const errorMessage = errorData.detail || "Bid Error!";
-                    showCardToast(auctionId, errorMessage, "bg-red-600");
-                } else {
-                    showCardToast(auctionId, "Bid Accepted!", "bg-green-600");
-                    if (bidInput) {
-                        bidInput.value = parseFloat(amount) + 10;
-                    }
-                }
-            })
-            .catch(err => {
-                showCardToast(auctionId, "Network Error", "bg-red-600");
-            });
-    }
-
-    function updateClocks() {
-        const now = Date.now();
-
-        for (const [id, data] of Object.entries(activeAuctions)) {
-            const { endsAt, timerEl, btnEl } = data;
-            if (!timerEl) continue;
-
-            const diff = endsAt - now;
-
-            if (diff <= 0) {
-                timerEl.innerText = "SOLD!";
-                timerEl.className = "text-xl font-black text-red-600 mb-4 tracking-widest transition-all duration-500";
-
-                if (btnEl && !btnEl.disabled) {
-                    btnEl.disabled = true;
-                    btnEl.innerText = "Closed";
-                    btnEl.className = "w-1/4 bg-gray-400 text-white font-bold py-2 px-4 rounded-lg cursor-not-allowed transition-all duration-500";
-
-                    document.getElementById(`username-${id}`).disabled = true;
-                    document.getElementById(`username-${id}`).className = "w-1/2 px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed";
-
-                    document.getElementById(`bid-amount-${id}`).disabled = true;
-                    document.getElementById(`bid-amount-${id}`).className = "w-1/4 px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed";
-
-                    const cardElement = document.getElementById(`card-${id}`);
-                    if(cardElement) cardElement.classList.remove('ring-4', 'ring-yellow-400', 'border-transparent');
-                }
-                delete activeAuctions[id];
-            } else {
-                const totalSeconds = Math.floor(diff / 1000);
-                const hours = Math.floor(totalSeconds / 3600);
-                const minutes = Math.floor((totalSeconds % 3600) / 60);
-                const seconds = totalSeconds % 60;
-
-                let timeStr = "";
-                if (hours > 0) {
-                    timeStr += `${hours}:${minutes.toString().padStart(2, '0')}:`;
-                } else {
-                    timeStr += `${minutes}:`;
-                }
-                timeStr += seconds.toString().padStart(2, '0');
-
-                if (diff < 15000) {
-                    timerEl.innerText = `⏳ Closing soon: ${timeStr}`;
-                    timerEl.classList.add("text-red-500");
-                } else {
-                    timerEl.innerText = `Time Left: ${timeStr}`;
-                    timerEl.classList.remove("text-red-500");
-                }
-            }
-        }
-    }
-    function showCardToast(auctionId, message, colorClass) {
-        const area = document.getElementById(`toast-area-${auctionId}`);
-        if (!area) return;
-
-        if (toastTimers[auctionId]) {
-            clearTimeout(toastTimers[auctionId].fadeTimer);
-            clearTimeout(toastTimers[auctionId].removeTimer);
-        } else {
-            toastTimers[auctionId] = {};
-        }
-
-        let toast = area.querySelector('.custom-toast');
-        if (!toast) {
-            toast = document.createElement('div');
-            area.appendChild(toast);
-        }
-
-        toast.className = `custom-toast ${colorClass} text-white px-6 py-2 rounded-full shadow-2xl transform transition-all duration-300 scale-100 opacity-100 mb-2 font-bold absolute`;
-        toast.innerText = message;
-
-        void toast.offsetWidth;
-
-        toastTimers[auctionId].fadeTimer = setTimeout(() => {
-            toast.classList.remove('scale-100', 'opacity-100');
-            toast.classList.add('scale-110', 'opacity-0');
-
-            toastTimers[auctionId].removeTimer = setTimeout(() => {
-                toast.remove();
-                delete toastTimers[auctionId];
-            }, 300);
-        }, 2000);
-    }
-</script>
+        <div class="flex space-x-6">
+            <a href="https://walker-systems.github.io/" target="_blank" class="hover:text-indigo-600 transition-colors">
+                🌐 Portfolio
+            </a>
+            <a href="https://github.com/walker-systems" target="_blank" class="hover:text-indigo-600 transition-colors">
+                🐙 GitHub
+            </a>
+            <a href="https://www.linkedin.com/in/justin-walker-0403923b1/" target="_blank" class="hover:text-indigo-600 transition-colors">
+                💼 LinkedIn
+            </a>
+        </div>
+    </div>
+    <div class="text-center mt-6 text-xs text-gray-400">
+        &copy; 2026 Walker Systems. Built with Spring WebFlux, Redis & Tailwind.
+    </div>
+</footer>
+<div id="terminal-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-700 transition-transform duration-500 transform translate-y-full z-50 flex flex-col" style="height: 35vh;">
+    <div class="flex justify-between items-center bg-gray-800 px-4 py-2 text-gray-400 font-mono text-sm shadow-md">
+        <span>user@bidding-engine: ~/logs/server.log</span>
+        <button onclick="toggleTerminal()" class="text-gray-400 hover:text-white font-bold text-lg">&times;</button>
+    </div>
+    <div id="terminal-output" class="p-4 flex-grow overflow-y-auto font-mono text-xs md:text-sm text-gray-300 space-y-1">
+        <div class="text-green-500 mb-2">Connected to Reactive Log Stream...</div>
+    </div>
+</div>
+<script src="/js/ui.js"></script>
+<script src="/js/stream.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/logs.js"></script>
 </body>
 </html>

@@ -128,8 +128,9 @@ public class AuctionRepository {
                 local reactionTimeMs = tonumber(ARGV[5])
                 local simulatedBidCount = tonumber(ARGV[6])
                 local simulatedNewIp = tonumber(ARGV[7])
-                local softCloseThreshold = tonumber(ARGV[8])
-                local currentTime = tonumber(ARGV[9])
+                local softCloseWindow = tonumber(ARGV[8])
+                local softCloseExtension = tonumber(ARGV[9])
+                local currentTime = tonumber(ARGV[10])
                 
                 local auctionJson = redis.call('GET', auctionKey)
                 if not auctionJson then return '{"error":"Auction not found"}' end
@@ -192,8 +193,11 @@ public class AuctionRepository {
                 auction.bidCountLastMin = simulatedBidCount
                 auction.isNewIp = simulatedNewIp
                 
-                if auction.endsAt and tonumber(auction.endsAt) < softCloseThreshold then
-                    auction.endsAt = softCloseThreshold
+                if auction.endsAt then
+                    local timeLeft = tonumber(auction.endsAt) - currentTime
+                    if timeLeft > 0 and timeLeft <= softCloseWindow then
+                        auction.endsAt = currentTime + softCloseExtension
+                    end
                 end
                 
                 local updatedJson = cjson.encode(auction)
@@ -203,7 +207,6 @@ public class AuctionRepository {
                 """;
 
         double currentEpochSeconds = java.time.Instant.now().toEpochMilli() / 1000.0;
-        double softCloseEpochSeconds = java.time.Instant.now().plusSeconds(60).toEpochMilli() / 1000.0;
 
         return stringTemplate.execute(
                 RedisScript.of(lua, String.class),
@@ -216,8 +219,9 @@ public class AuctionRepository {
                         String.valueOf(reactionTimeMs),
                         String.valueOf(simulatedBidCount),
                         String.valueOf(simulatedNewIp),
-                        String.valueOf(softCloseEpochSeconds),
-                        String.valueOf(currentEpochSeconds)
+                        "5",  // 👈 ARGV[8]: The Danger Zone window (seconds)
+                        "30", // 👈 ARGV[9]: The Extension time (seconds)
+                        String.valueOf(currentEpochSeconds) // 👈 ARGV[10]
                 )
         ).next().flatMap(result -> {
             if (result.startsWith("{\"error\"")) {

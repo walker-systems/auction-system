@@ -12,6 +12,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -39,7 +40,7 @@ public class DemoBotService {
         }
         log.info("🤖 Demo Bot Swarm ACTIVATED!");
 
-        botTask = Flux.interval(Duration.ofMillis(200), Duration.ofMillis(800))
+        botTask = Flux.interval(Duration.ofMillis(100), Duration.ofMillis(250))
                 .flatMap(tick -> placeRandomBid())
                 .subscribe();
     }
@@ -61,8 +62,10 @@ public class DemoBotService {
                     Auction target = activeAuctions.get(ThreadLocalRandom.current().nextInt(activeAuctions.size()));
                     String botName = AI_PERSONAS.get(ThreadLocalRandom.current().nextInt(AI_PERSONAS.size()));
 
-                    int randomIncrement = ThreadLocalRandom.current().nextInt(1, 101);
-                    BigDecimal bidAmount = target.currentPrice().add(BigDecimal.valueOf(randomIncrement));
+                    double randomIncrement = 1.0 + (100.0 * ThreadLocalRandom.current().nextDouble());
+                    BigDecimal bidAmount = target.currentPrice()
+                            .add(BigDecimal.valueOf(randomIncrement))
+                            .setScale(2, RoundingMode.HALF_UP);
 
                     boolean isSuspicious = botName.toLowerCase().contains("bot") || botName.toLowerCase().contains("script");
 
@@ -76,7 +79,7 @@ public class DemoBotService {
                     log.info("🤖 Bot '{}' bidding ${} on {} (Reaction: {}ms)",
                             botName, bidAmount, target.itemId(), reactionTimeMs);
 
-                    return auctionService.placeBid(
+                    return auctionService.placeMaxBid(
                             target.id(),
                             botName,
                             bidAmount,
