@@ -25,8 +25,6 @@ public class AuctionController {
                                   @Valid @RequestBody BidRequest request,
                                   ServerHttpRequest httpRequest) {
 
-        // TODO: Update to check X-Forwarded-For to find real user IP instead of .getRemoteAddress()
-        // TODO: Train model to recognize "unknown" ipAddress as a suspicious feature
         String ipAddress = Optional.ofNullable(httpRequest.getRemoteAddress())
                 .map(addr -> addr.getAddress().getHostAddress())
                 .orElse("unknown");
@@ -38,9 +36,17 @@ public class AuctionController {
         return auctionService.placeBid(id, request.bidder(), request.amount(), ipAddress, userAgent, request.reactionTimeMs());
     }
 
+    // Existing individual stream (kept for legacy/testing purposes)
     @GetMapping(value = "/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<Auction> streamAuctionUpdates(@PathVariable String id) {
         return auctionService.streamAuctionUpdates(id);
+    }
+
+    // 👇 THE FIX: The new Global Multiplexed Stream Endpoint!
+    @GetMapping(value = "/stream/all", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<Auction> streamAllAuctions() {
+        log.info("🌐 Client connected to Global Multiplexed Stream");
+        return auctionService.streamAllAuctionUpdates();
     }
 
     @GetMapping
@@ -53,10 +59,6 @@ public class AuctionController {
     public Mono<Auction> placeMaxBid(
             @PathVariable String id,
             @RequestBody MaxBidRequest request) {
-
-        // TODO: For this portfolio demo, we trust the telemetry sent by the client.
-        // In a true production environment, IP and User-Agent would be extracted
-        // securely from the ServerHttpRequest headers, exactly like your standard placeBid.
 
         return auctionService.placeMaxBid(
                 id,

@@ -83,6 +83,8 @@ public class AuctionService {
     public Mono<Auction> placeMaxBid(String auctionId, String bidderId, BigDecimal maxBid,
                                      String ipAddress, String userAgent, int reactionTimeMs) {
 
+        log.info("📥 Received Proxy Bid Request: User '{}' bidding up to ${} on {}", bidderId, maxBid, auctionId);
+
         return redisTemplate.opsForSet().isMember("banned_users", bidderId)
                 .flatMap(isBanned -> {
                     if (isBanned) {
@@ -110,6 +112,15 @@ public class AuctionService {
     public Flux<Auction> streamAuctionUpdates(String auctionId) {
         return auctionRepository.observeAuctionUpdates(auctionId)
                 .sample(Duration.ofMillis(100));
+    }
+
+    // 👇 THE FIX: The massive multiplexing funnel
+    public Flux<Auction> streamAllAuctionUpdates() {
+        log.info("🔌 Multiplexing all active auction streams into a single global firehose...");
+        return auctionRepository.findAll()
+                .filter(Auction::active)
+                // Use flatMap to subscribe to every individual item's stream and merge them all into one!
+                .flatMap(auction -> streamAuctionUpdates(auction.id()));
     }
 
     public Flux<Auction> getAllAuctions() {
@@ -144,7 +155,7 @@ public class AuctionService {
                             auction.currentPrice(),
                             auction.highBidder(),
                             auction.endsAt(),
-                            false, // 👈 Set active to false
+                            false,
                             auction.version() + 1,
                             auction.ipAddress(),
                             auction.userAgent(),

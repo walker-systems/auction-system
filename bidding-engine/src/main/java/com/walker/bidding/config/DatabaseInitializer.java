@@ -11,11 +11,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.UUID;
 
 @Component
 @Profile("!prod")
@@ -47,16 +47,17 @@ public class DatabaseInitializer implements CommandLineRunner {
                             long i = tuple.getT1();
                             String itemName = tuple.getT2();
 
-                            long startingPrice = 50 + ThreadLocalRandom.current().nextInt(450);
+                            double randomPrice = 5.0 + (1200.0 * ThreadLocalRandom.current().nextDouble());
+                            BigDecimal startingPrice = BigDecimal.valueOf(randomPrice).setScale(2, RoundingMode.HALF_UP);
 
-                            int randomSeconds = ThreadLocalRandom.current().nextInt(30, 120);
+                            long randomMillis = ThreadLocalRandom.current().nextLong(10000, 70000);
                             Instant staggeredExpiration = Instant.now()
-                                    .plus(Duration.ofSeconds(randomSeconds));
+                                    .plus(Duration.ofMillis(randomMillis));
 
                             Auction newAuction = new Auction(
                                     "auc-" + i,
                                     itemName,
-                                    BigDecimal.valueOf(startingPrice),
+                                    startingPrice,
                                     "System",
                                     staggeredExpiration,
                                     true,
@@ -72,4 +73,5 @@ public class DatabaseInitializer implements CommandLineRunner {
                 )
                 .doOnComplete(() -> log.info("🎉 Storefront fully stocked!"))
                 .then();
-    }}
+    }
+}
