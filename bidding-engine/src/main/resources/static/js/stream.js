@@ -21,6 +21,9 @@ function connectToGlobalStream() {
         else if (typeof rawTime === 'string' && !rawTime.includes('-')) endMs = parseFloat(rawTime) * 1000;
         else endMs = new Date(rawTime).getTime();
 
+        const priceIncreased = auctionState && updatedAuction.currentPrice > auctionState.currentPrice;
+        const versionIncreased = auctionState && updatedAuction.version > auctionState.version;
+
         if (auctionState) {
             auctionState.endsAt = endMs;
             auctionState.highBidder = updatedAuction.highBidder || 'System';
@@ -45,9 +48,12 @@ function connectToGlobalStream() {
         const userElement = document.getElementById(`username-${auctionId}`);
         const currentUser = userElement ? userElement.value.trim() : "";
 
-        if (updatedAuction.currentPrice > auctionState.currentPrice) {
+        if (priceIncreased) {
             rowElement.classList.add('bg-green-50');
             setTimeout(() => rowElement.classList.remove('bg-green-50'), 400);
+        } else if (versionIncreased) {
+            rowElement.classList.add('bg-blue-50');
+            setTimeout(() => rowElement.classList.remove('bg-blue-50'), 400);
         }
 
         if (auctionState.endsAt && endMs > auctionState.endsAt + 1000) {
@@ -79,16 +85,16 @@ function connectToGlobalStream() {
             }
         }
 
-        if (updatedAuction.currentPrice > auctionState.currentPrice) {
+        priceElement.innerText = `$${updatedAuction.currentPrice.toFixed(2)}`;
+        bidderElement.innerText = updatedAuction.highBidder || 'System';
+
+        if (priceIncreased) {
             const bidInput = document.getElementById(`bid-amount-${auctionId}`);
             const requiredMinBid = parseFloat(calculateNextBid(updatedAuction.currentPrice));
 
             if(bidInput && parseFloat(bidInput.value) < requiredMinBid) {
                 bidInput.value = requiredMinBid.toFixed(2);
             }
-
-            priceElement.innerText = `$${updatedAuction.currentPrice.toFixed(2)}`;
-            bidderElement.innerText = updatedAuction.highBidder || 'System';
         }
     };
 

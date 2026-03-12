@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.util.retry.Retry;
 
 import java.math.BigDecimal;
@@ -22,62 +23,47 @@ public class AuctionService {
     private final AuctionRepository auctionRepository;
     private final ReactiveRedisTemplate<String, String> redisTemplate;
 
+    private final Sinks.Many<Auction> globalFirehose = Sinks.many().multicast().directBestEffort();
+
     public Mono<Auction> placeBid(String auctionId, String bidder, BigDecimal bidAmount,
                                   String ipAddress, String userAgent, int reactionTimeMs) {
 
         return redisTemplate.opsForSet().isMember("banned_users", bidder)
                 .flatMap(isBanned -> {
                     if (isBanned) {
-                        log.error("🚫 Access Denied: Banned user '{}' attempted to bid on auction {}", bidder, auctionId);
-                        return Mono.error(new IllegalAccessException("User is banned for fraudulent activity."));
+                        return Mono.error(new IllegalAccessException("User is banned."));
                     }
 
                     return auctionRepository.findById(auctionId)
-                            .switchIfEmpty(Mono.error(new IllegalArgumentException("Auction not found: " + auctionId)))
+                            .switchIfEmpty(Mono.error(new IllegalArgumentException("Auction not found.")))
                             .flatMap(auction -> {
-
-                                if (!auction.active()) {
-                                    return Mono.error(new IllegalStateException("Auction is closed."));
-                                }
+                                if (!auction.active()) return Mono.error(new IllegalStateException("Closed."));
                                 if (bidAmount.compareTo(auction.currentPrice()) <= 0) {
-                                    return Mono.error(new IllegalArgumentException("Bid must be higher than the current price of "
-                                            + auction.currentPrice()));
+                                    return Mono.error(new IllegalArgumentException("Bid too low."));
                                 }
-
-                                int simulatedBidCount = (reactionTimeMs < 100) ? 65 : 1;
-                                int simulatedNewIp = (reactionTimeMs < 100) ? 1 : 0;
 
                                 Auction updatedAuction = new Auction(
-                                        auction.id(),
-                                        auction.itemId(),
-                                        bidAmount,
-                                        bidder,
-                                        auction.endsAt(),
-                                        true,
-                                        auction.version() + 1,
-                                        ipAddress,
-                                        userAgent,
-                                        reactionTimeMs,
-                                        simulatedBidCount,
-                                        simulatedNewIp
+                                        auction.id(), auction.itemId(), bidAmount, bidder,
+                                        auction.endsAt(), true, auction.version() + 1,
+                                        ipAddress, userAgent, reactionTimeMs,
+                                        (reactionTimeMs < 100) ? 65 : 1, (reactionTimeMs < 100) ? 1 : 0
                                 );
+
                                 return auctionRepository.updateWithVersion(updatedAuction)
                                         .flatMap(bidSuccess -> {
                                             if (bidSuccess) {
-                                                log.info("✅ Bid placed successfully by {} for ${}", bidder, bidAmount);
+                                                log.info("✅ Bid placed by {} for ${}", bidder, bidAmount);
                                                 return auctionRepository.publishUpdate(updatedAuction)
+                                                        // 👇 NEW: Emit the successful bid to the firehose
+                                                        .doOnSuccess(v -> globalFirehose.tryEmitNext(updatedAuction))
                                                         .thenReturn(updatedAuction);
                                             } else {
-                                                log.warn("⚠️ Collision detected for auction "
-                                                        + "{}. Someone else bid at the exact same time!", auctionId);
-                                                return Mono.error(new ConcurrentBidException("Bid collision"));
+                                                return Mono.error(new ConcurrentBidException("Collision"));
                                             }
                                         });
                             });
                 })
-                .retryWhen(Retry.backoff(3, Duration.ofMillis(50))
-                        .filter(throwable -> throwable instanceof ConcurrentBidException)
-                );
+                .retryWhen(Retry.backoff(3, Duration.ofMillis(50)).filter(t -> t instanceof ConcurrentBidException));
     }
 
     public Mono<Auction> placeMaxBid(String auctionId, String bidderId, BigDecimal maxBid,
@@ -89,38 +75,31 @@ public class AuctionService {
                 .flatMap(isBanned -> {
                     if (isBanned) {
                         log.error("🚫 Access Denied: Banned user '{}' attempted proxy bid on {}", bidderId, auctionId);
-                        return Mono.error(new IllegalAccessException("User is banned for fraudulent activity."));
+                        return Mono.error(new IllegalAccessException("User banned."));
                     }
 
-                    int simulatedBidCount = (reactionTimeMs < 100) ? 65 : 1;
-                    int simulatedNewIp = (reactionTimeMs < 100) ? 1 : 0;
+                    int bidCount = (reactionTimeMs < 100) ? 65 : 1;
+                    int isNewIp = (reactionTimeMs < 100) ? 1 : 0;
 
-                    return auctionRepository.placeProxyBid(
-                                    auctionId, bidderId, maxBid,
-                                    ipAddress, userAgent, reactionTimeMs,
-                                    simulatedBidCount, simulatedNewIp
-                            )
+                    return auctionRepository.placeProxyBid(auctionId, bidderId, maxBid, ipAddress, userAgent, reactionTimeMs, bidCount, isNewIp)
                             .flatMap(updatedAuction -> {
                                 log.info("📈 Proxy bid evaluated. Winner: {}, Visible Price: ${}",
                                         updatedAuction.highBidder(), updatedAuction.currentPrice());
+
                                 return auctionRepository.publishUpdate(updatedAuction)
+                                        .doOnSuccess(v -> globalFirehose.tryEmitNext(updatedAuction))
                                         .thenReturn(updatedAuction);
                             });
                 });
     }
-
     public Flux<Auction> streamAuctionUpdates(String auctionId) {
-        return auctionRepository.observeAuctionUpdates(auctionId)
-                .sample(Duration.ofMillis(100));
+        return auctionRepository.observeAuctionUpdates(auctionId).sample(Duration.ofMillis(100));
     }
 
-    // 👇 THE FIX: The massive multiplexing funnel
+    // 👇 FIXED: Instead of 10,000 DB calls, we just return the shared hot stream!
     public Flux<Auction> streamAllAuctionUpdates() {
-        log.info("🔌 Multiplexing all active auction streams into a single global firehose...");
-        return auctionRepository.findAll()
-                .filter(Auction::active)
-                // Use flatMap to subscribe to every individual item's stream and merge them all into one!
-                .flatMap(auction -> streamAuctionUpdates(auction.id()));
+        log.info("🔌 Client connected to the global firehose...");
+        return globalFirehose.asFlux();
     }
 
     public Flux<Auction> getAllAuctions() {
@@ -128,45 +107,24 @@ public class AuctionService {
     }
 
     public Mono<Void> revertFraudulentBid(String auctionId, String fraudUser) {
-        log.warn("⏪ Sentinel requested rollback for bot: {} on auction: {}", fraudUser, auctionId);
-
-        BigDecimal defaultStartingPrice = new BigDecimal("10.00");
-
-        return auctionRepository.revertFraudulentBid(auctionId, fraudUser, defaultStartingPrice)
-                .flatMap(revertedAuction -> {
-                    log.info("✅ Rollback complete. True winner restored: {} at ${}",
-                            revertedAuction.highBidder(), revertedAuction.currentPrice());
-                    return auctionRepository.publishUpdate(revertedAuction);
-                })
+        return auctionRepository.revertFraudulentBid(auctionId, fraudUser, new BigDecimal("10.00"))
+                .flatMap(reverted -> auctionRepository.publishUpdate(reverted)
+                        // 👇 NEW: Emit to firehose
+                        .doOnSuccess(v -> globalFirehose.tryEmitNext(reverted)))
                 .then();
     }
 
-    @Scheduled(fixedRate = 1000)
+    @Scheduled(fixedRate = 60000)
     public void sweepExpiredAuctions() {
         auctionRepository.findAll()
                 .filter(Auction::active)
-                .filter(auction -> auction.endsAt().isBefore(Instant.now()))
+                .filter(a -> a.endsAt().isBefore(Instant.now()))
                 .flatMap(auction -> {
-                    log.info("⏰ Auction {} has ended. Closing and removing from storefront.", auction.id());
-
-                    Auction closedAuction = new Auction(
-                            auction.id(),
-                            auction.itemId(),
-                            auction.currentPrice(),
-                            auction.highBidder(),
-                            auction.endsAt(),
-                            false,
-                            auction.version() + 1,
-                            auction.ipAddress(),
-                            auction.userAgent(),
-                            auction.reactionTimeMs(),
-                            auction.bidCountLastMin(),
-                            auction.isNewIp()
-                    );
-
+                    Auction closedAuction = new Auction(auction.id(), auction.itemId(), auction.currentPrice(), auction.highBidder(), auction.endsAt(), false, auction.version() + 1, auction.ipAddress(), auction.userAgent(), auction.reactionTimeMs(), auction.bidCountLastMin(), auction.isNewIp());
                     return auctionRepository.save(closedAuction)
-                            .then(auctionRepository.publishUpdate(closedAuction));
-                })
-                .subscribe();
+                            .then(auctionRepository.publishUpdate(closedAuction))
+                            // 👇 NEW: Emit to firehose
+                            .doOnSuccess(v -> globalFirehose.tryEmitNext(closedAuction));
+                }).subscribe();
     }
 }

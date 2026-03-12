@@ -2,79 +2,75 @@ package com.walker.bidding.config;
 
 import com.walker.bidding.auction.Auction;
 import com.walker.bidding.auction.AuctionRepository;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
-import org.springframework.data.redis.core.ReactiveRedisTemplate; // 👈 NEW IMPORT
-import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Component
-@Profile("!prod")
 @RequiredArgsConstructor
 @Slf4j
-public class DatabaseInitializer implements CommandLineRunner {
+public class DatabaseInitializer {
 
     private final AuctionRepository auctionRepository;
-    private final ReactiveRedisTemplate<String, String> redisTemplate; // 👈 NEW INJECTION
 
-    private final List<String> DEMO_ITEMS = List.of(
-            "Sony PlayStation 5 Pro", "Apple MacBook Pro M3 Max",
-            "Vintage 1999 Holographic Charizard", "Herman Miller Aeron Chair",
-            "NVIDIA RTX 4090 GPU", "Signed Michael Jordan Baseball",
-            "Onewheel Onewheel+ XR", "Espresso Machine - La Marzocco"
+    private static final List<String> ADJECTIVES = List.of(
+            "Vintage", "Refurbished", "Brand New", "Limited Edition", "Signed",
+            "Antique", "Factory Sealed", "Custom", "Mint Condition", "Rare"
+    );
+    private static final List<String> BRANDS = List.of(
+            "Sony", "Apple", "NVIDIA", "Herman Miller", "La Marzocco",
+            "Rolex", "Samsung", "LG", "Nike", "Tesla", "Omega", "Nintendo"
+    );
+    private static final List<String> NOUNS = List.of(
+            "Monitor", "Keyboard", "GPU", "Chair", "Espresso Machine",
+            "Watch", "Smartphone", "Laptop", "Sneakers", "Hoverboard", "Camera"
     );
 
-    @Override
-    public void run(String... args) {
+    @EventListener(ApplicationReadyEvent.class)
+    public void onApplicationReady() {
         resetAndSeedDatabase().subscribe();
     }
 
     public Mono<Void> resetAndSeedDatabase() {
-        log.info("🌱 Wiping old data and seeding database with realistic auctions...");
+        log.info("🌱 Wiping old data and seeding database with 10,000 procedural auctions...");
+        return auctionRepository.deleteAll()
+                .then(seedDatabase())
+                .doOnSuccess(v -> log.info("🎉 Storefront fully stocked with 10,000 items!"));
+    }
 
-        return redisTemplate.delete("banned_users")
-                .then(auctionRepository.deleteAll())
-                .thenMany(Flux.fromIterable(DEMO_ITEMS)
-                        .index()
-                        .flatMap(tuple -> {
-                            long i = tuple.getT1();
-                            String itemName = tuple.getT2();
+    private Mono<Void> seedDatabase() {
+        return Flux.range(1, 10000)
+                .flatMap(i -> {
+                    String id = "auc-" + i;
+                    String name = generateName();
 
-                            double randomPrice = 5.0 + (1200.0 * ThreadLocalRandom.current().nextDouble());
-                            BigDecimal startingPrice = BigDecimal.valueOf(randomPrice).setScale(2, RoundingMode.HALF_UP);
+                    double randomPrice = 10.0 + (990.0 * ThreadLocalRandom.current().nextDouble());
+                    BigDecimal price = BigDecimal.valueOf(randomPrice).setScale(2, RoundingMode.HALF_UP);
 
-                            long randomMillis = ThreadLocalRandom.current().nextLong(10000, 70000);
-                            Instant staggeredExpiration = Instant.now()
-                                    .plus(Duration.ofMillis(randomMillis));
+                    long offsetSeconds = ThreadLocalRandom.current().nextLong(3600, 86400);
+                    Instant endsAt = Instant.now().plusSeconds(offsetSeconds);
 
-                            Auction newAuction = new Auction(
-                                    "auc-" + i,
-                                    itemName,
-                                    startingPrice,
-                                    "System",
-                                    staggeredExpiration,
-                                    true,
-                                    0,
-                                    null,
-                                    null,
-                                    0,
-                                    0,
-                                    0
-                            );
-                            return auctionRepository.save(newAuction);
-                        })
-                )
-                .doOnComplete(() -> log.info("🎉 Storefront fully stocked!"))
+                    Auction auction = new Auction(
+                            id, name, price, "System", endsAt, true, 0, null, null, 0, 0, 0
+                    );
+                    return auctionRepository.save(auction);
+                }, 256)
                 .then();
+    }
+    private String generateName() {
+        String adj = ADJECTIVES.get(ThreadLocalRandom.current().nextInt(ADJECTIVES.size()));
+        String brand = BRANDS.get(ThreadLocalRandom.current().nextInt(BRANDS.size()));
+        String noun = NOUNS.get(ThreadLocalRandom.current().nextInt(NOUNS.size()));
+        return adj + " " + brand + " " + noun;
     }
 }

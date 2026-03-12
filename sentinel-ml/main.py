@@ -17,7 +17,7 @@ class BidRequest(BaseModel):
     bid_amount: float
 
 @app.post("/predict")
-async def predict_fraud(bid: BidRequest):
+def predict_fraud(bid: BidRequest):
     data = pd.DataFrame([bid.model_dump()])
     
     expected_order = [

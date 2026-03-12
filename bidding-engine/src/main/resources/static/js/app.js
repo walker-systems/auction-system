@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStorefront();
 
     if (telemetryInterval) clearInterval(telemetryInterval);
-    telemetryInterval = setInterval(updateTelemetryUI, 1000);
+    telemetryInterval = setInterval(updateTelemetryUI, 50);
 });
 
 function unlockLogsButton() {
@@ -31,25 +31,27 @@ function unlockLogsButton() {
 
 function updateTelemetryUI() {
     const now = Date.now();
-    bidTimestamps = bidTimestamps.filter(timestamp => now - timestamp <= 1000);
+
+    while (bidTimestamps.length > 0 && now - bidTimestamps[0] > 1000) {
+        bidTimestamps.shift();
+    }
 
     document.getElementById('stat-active').innerText = globalActiveCount.toLocaleString();
     document.getElementById('stat-bids').innerText = globalTotalBids.toLocaleString();
     document.getElementById('stat-tps').innerText = bidTimestamps.length.toLocaleString();
 }
-
 function calculateNextBid(currentPrice) {
+    const price = parseFloat(currentPrice);
     let increment = 50.00;
 
-    if (currentPrice < 10.00) increment = 0.50;
-    else if (currentPrice < 50.00) increment = 1.00;
-    else if (currentPrice < 100.00) increment = 5.00;
-    else if (currentPrice < 500.00) increment = 10.00;
-    else if (currentPrice < 1000.00) increment = 25.00;
+    if (price < 10.00) increment = 0.50;
+    else if (price < 50.00) increment = 1.00;
+    else if (price < 100.00) increment = 5.00;
+    else if (price < 500.00) increment = 10.00;
+    else if (price < 1000.00) increment = 25.00;
 
-    return (currentPrice + increment).toFixed(2);
+    return (price + increment).toFixed(2);
 }
-
 function renderPage(pageNumber) {
     currentPage = pageNumber;
     const tbody = document.getElementById('auction-tbody');
@@ -93,5 +95,19 @@ function changePage(direction) {
 
     if (newPage >= 1 && newPage <= totalPages) {
         renderPage(newPage);
+    }
+}
+
+function sweepExpiredAuctions() {
+    if (!globalAllAuctions || globalAllAuctions.length === 0) return;
+
+    const now = Date.now();
+    const initialLength = globalAllAuctions.length;
+
+    globalAllAuctions = globalAllAuctions.filter(a => a.endsAtMs > now);
+
+    if (globalAllAuctions.length !== initialLength) {
+        globalActiveCount = globalAllAuctions.length;
+        renderPage(currentPage);
     }
 }
