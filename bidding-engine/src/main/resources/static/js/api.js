@@ -2,13 +2,11 @@ function loadStorefront() {
     fetch('/api/auctions')
         .then(response => response.json())
         .then(auctions => {
-            const tbody = document.getElementById('auction-tbody');
-            tbody.innerHTML = '';
-
+            globalAllAuctions = auctions;
             globalActiveCount = auctions.length;
+            globalTotalBids = 0;
 
             auctions.forEach(auction => {
-                createAuctionRow(auction, tbody);
                 globalTotalBids += auction.version || 0;
 
                 let endMs;
@@ -22,10 +20,12 @@ function loadStorefront() {
                     endsAt: endMs,
                     currentPrice: auction.currentPrice,
                     highBidder: auction.highBidder || 'System',
-                    timerEl: document.getElementById(`timer-${auction.id}`),
-                    btnEl: document.getElementById(`btn-${auction.id}`)
+                    timerEl: null,
+                    btnEl: null
                 };
             });
+
+            renderPage(1);
 
             connectToGlobalStream();
 
