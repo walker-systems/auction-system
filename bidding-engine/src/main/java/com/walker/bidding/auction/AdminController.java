@@ -24,6 +24,11 @@ public class AdminController {
     private final DatabaseInitializer databaseInitializer;
     private final LogStreamService logStreamService;
 
+    @GetMapping("/seeding-status")
+    public Mono<Boolean> checkSeedingStatus() {
+        return Mono.just(databaseInitializer.isSeeding());
+    }
+
     @PostMapping("/start-bots")
     public Mono<Void> startBots() {
         demoBotService.startBotSwarm();
@@ -39,7 +44,8 @@ public class AdminController {
     @PostMapping("/reset")
     public Mono<Void> resetSystem() {
         demoBotService.stopBotSwarm();
-        return databaseInitializer.resetAndSeedDatabase();
+        databaseInitializer.resetAndSeedDatabase().subscribe();
+        return Mono.empty();
     }
 
     @GetMapping(value = "/logs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

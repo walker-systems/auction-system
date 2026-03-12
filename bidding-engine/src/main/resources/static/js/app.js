@@ -6,7 +6,7 @@ const toastTimers = {};
 
 let globalAllAuctions = [];
 let currentPage = 1;
-const ITEMS_PER_PAGE = 100;
+const ITEMS_PER_PAGE = 12;
 
 let globalActiveCount = 0;
 let globalTotalBids = 0;

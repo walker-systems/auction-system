@@ -1,24 +1,26 @@
 package com.walker.bidding.config;
 
-import com.walker.bidding.auction.Auction;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.walker.bidding.auction.AuctionRepository;
 import com.walker.bidding.auction.AuctionService;
+import com.walker.bidding.auction.BidIncrementCalculator;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
-import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 @Service
 @Profile("!prod")
@@ -29,67 +31,75 @@ public class DemoBotService {
     private final AuctionService auctionService;
     private final AuctionRepository auctionRepository;
     private Disposable botTask;
-    private Disposable cacheTask;
 
-    private List<Auction> hotTargets = new CopyOnWriteArrayList<>();
+    private List<BotPersona> botSwarm;
 
-    private final List<String> AI_PERSONAS = List.of(
-            "bot_user_99", "legit_human_dave", "sniper_script_x", "susan_the_buyer",
-            "auto_bidder_v2", "casual_bidder_bob", "deal_hunter_99", "script_kiddie_1",
-            "human_alice", "bot_net_alpha", "bargain_shopper"
-    );
+    public record BotPersona(String bidderId, String ipAddress, String userAgent, int baseReactionTimeMs, boolean isMalicious) {}
+
+    @PostConstruct
+    public void init() {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            InputStream is = new ClassPathResource("bot_swarm.json").getInputStream();
+            botSwarm = objectMapper.readValue(is, new TypeReference<List<BotPersona>>() {});
+            log.info("🤖 Successfully loaded {} unique bots into memory.", botSwarm.size());
+        } catch (Exception e) {
+            log.error("Failed to load bot_swarm.json. Bots will not start.", e);
+        }
+    }
 
     public synchronized void startBotSwarm() {
-        if (botTask != null && !botTask.isDisposed()) return;
+        if (botTask != null && !botTask.isDisposed()) {
+            log.info("Bots are already running!");
+            return;
+        }
+        log.info("🤖 Demo Bot Swarm ACTIVATED!");
 
-        log.info("🤖 Demo Bot Swarm ACTIVATED! Commencing Bidding...");
-
-        cacheTask = Flux.interval(Duration.ZERO, Duration.ofSeconds(5))
-                .flatMap(tick -> auctionRepository.findAll()
-                        .filter(Auction::active)
-                        .collectList()
-                        .map(list -> list.stream()
-                                .sorted(Comparator.comparing(Auction::endsAt))
-                                .limit(100)
-                                .collect(Collectors.toList()))
-                )
-                .doOnNext(topItems -> this.hotTargets = topItems)
-                .subscribe();
-
-        botTask = Flux.interval(Duration.ofMillis(100))
+        botTask = Flux.interval(Duration.ofMillis(100), Duration.ofMillis(250))
                 .flatMap(tick -> placeRandomBid())
                 .subscribe();
     }
 
     public synchronized void stopBotSwarm() {
-        if (botTask != null && !botTask.isDisposed()) botTask.dispose();
-        if (cacheTask != null && !cacheTask.isDisposed()) cacheTask.dispose();
-        log.info("🛑 Demo Bot Swarm DEACTIVATED.");
+        if (botTask != null && !botTask.isDisposed()) {
+            botTask.dispose();
+            log.info("🛑 Demo Bot Swarm DEACTIVATED.");
+        }
     }
 
     private Mono<Void> placeRandomBid() {
-        String targetId = "auc-" + ThreadLocalRandom.current().nextInt(1, 10001);
+        if (botSwarm == null || botSwarm.isEmpty()) return Mono.empty();
+
+        int roll = ThreadLocalRandom.current().nextInt(100);
+        int targetNum = (roll < 85)
+                ? ThreadLocalRandom.current().nextInt(1, 25)
+                : ThreadLocalRandom.current().nextInt(25, 10001);
+
+        String targetId = "auc-" + targetNum;
 
         return auctionRepository.findById(targetId)
                 .flatMap(target -> {
                     if (!target.active()) return Mono.empty();
 
-                    String botName = AI_PERSONAS.get(ThreadLocalRandom.current().nextInt(AI_PERSONAS.size()));
-                    double randomIncrement = 1.0 + (100.0 * ThreadLocalRandom.current().nextDouble());
+                    BotPersona bot = botSwarm.get(ThreadLocalRandom.current().nextInt(botSwarm.size()));
+
+                    BigDecimal minIncrement = BidIncrementCalculator.getIncrement(target.currentPrice());
+                    double multiplier = 1.0 + ThreadLocalRandom.current().nextInt(5);
+
                     BigDecimal bidAmount = target.currentPrice()
-                            .add(BigDecimal.valueOf(randomIncrement))
+                            .add(minIncrement.multiply(BigDecimal.valueOf(multiplier)))
                             .setScale(2, RoundingMode.HALF_UP);
 
-                    boolean isSuspicious = botName.toLowerCase().contains("bot") || botName.toLowerCase().contains("script");
-                    String ipAddress = isSuspicious ? "192.168.1.99" : "72.14.213.15";
-                    String userAgent = isSuspicious ? "python-requests/2.31.0" : "Mozilla/5.0";
-                    int reactionTimeMs = isSuspicious ? ThreadLocalRandom.current().nextInt(10, 51) : ThreadLocalRandom.current().nextInt(400, 2001);
-
                     log.info("🤖 Bot '{}' bidding ${} on {} (Reaction: {}ms)",
-                            botName, bidAmount, targetId, reactionTimeMs);
+                            bot.bidderId(), bidAmount, targetId, bot.baseReactionTimeMs());
 
                     return auctionService.placeMaxBid(
-                            target.id(), botName, bidAmount, ipAddress, userAgent, reactionTimeMs
+                            target.id(),
+                            bot.bidderId(),
+                            bidAmount,
+                            bot.ipAddress(),
+                            bot.userAgent(),
+                            bot.baseReactionTimeMs()
                     ).onErrorResume(e -> Mono.empty());
                 }).then();
     }

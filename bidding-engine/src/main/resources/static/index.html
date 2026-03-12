@@ -5,8 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reactive Bidding Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="data:,">
 </head>
 <body class="bg-gray-100 p-8 font-sans">
+<div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-90 z-[100] flex flex-col items-center justify-center transition-opacity duration-500">
+    <div class="animate-spin rounded-full h-24 w-24 border-t-4 border-b-4 border-blue-500 mb-6"></div>
+    <h2 class="text-3xl font-black text-white tracking-widest mb-2">BID<span class="text-blue-500">STREAM</span></h2>
+    <p class="text-blue-300 font-mono text-sm animate-pulse" id="loading-text">Connecting to server...</p>
+</div>
 
 <div class="max-w-7xl mx-auto">
     <div class="flex justify-between items-center mb-6">

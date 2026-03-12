@@ -21,24 +21,6 @@ function connectToGlobalStream() {
         else if (typeof rawTime === 'string' && !rawTime.includes('-')) endMs = parseFloat(rawTime) * 1000;
         else endMs = new Date(rawTime).getTime();
 
-        const priceIncreased = auctionState && updatedAuction.currentPrice > auctionState.currentPrice;
-        const versionIncreased = auctionState && updatedAuction.version > auctionState.version;
-
-        if (auctionState) {
-            auctionState.endsAt = endMs;
-            auctionState.highBidder = updatedAuction.highBidder || 'System';
-            auctionState.version = updatedAuction.version || 0;
-            auctionState.currentPrice = updatedAuction.currentPrice;
-
-            const globalItem = globalAllAuctions.find(a => a.id === auctionId);
-            if (globalItem) {
-                globalItem.endsAt = updatedAuction.endsAt;
-                globalItem.highBidder = updatedAuction.highBidder;
-                globalItem.version = updatedAuction.version;
-                globalItem.currentPrice = updatedAuction.currentPrice;
-            }
-        }
-
         const rowElement = document.getElementById(`row-${auctionId}`);
         const priceElement = document.getElementById(`price-${auctionId}`);
         const bidderElement = document.getElementById(`bidder-${auctionId}`);
@@ -48,12 +30,37 @@ function connectToGlobalStream() {
         const userElement = document.getElementById(`username-${auctionId}`);
         const currentUser = userElement ? userElement.value.trim() : "";
 
-        if (priceIncreased) {
-            rowElement.classList.add('bg-green-50');
-            setTimeout(() => rowElement.classList.remove('bg-green-50'), 400);
-        } else if (versionIncreased) {
-            rowElement.classList.add('bg-blue-50');
-            setTimeout(() => rowElement.classList.remove('bg-blue-50'), 400);
+        const priceIncreased = updatedAuction.currentPrice > auctionState.currentPrice;
+        const versionIncreased = updatedAuction.version > auctionState.version;
+
+        if (priceIncreased || versionIncreased) {
+            rowElement.classList.remove('bg-green-100', 'bg-blue-100', 'transition-colors', 'duration-500');
+
+            if (priceIncreased) {
+                rowElement.classList.add('bg-green-100', 'transition-colors', 'duration-500');
+            } else if (versionIncreased) {
+                rowElement.classList.add('bg-blue-100', 'transition-colors', 'duration-500');
+            }
+
+            setTimeout(() => {
+                rowElement.classList.remove('bg-green-100', 'bg-blue-100');
+            }, 300);
+        }
+
+        auctionState.endsAt = endMs;
+        auctionState.highBidder = updatedAuction.highBidder || 'System';
+        auctionState.version = updatedAuction.version || 0;
+        auctionState.currentPrice = updatedAuction.currentPrice;
+
+        priceElement.innerText = `$${updatedAuction.currentPrice.toFixed(2)}`;
+        bidderElement.innerText = updatedAuction.highBidder || 'System';
+
+        const globalItem = globalAllAuctions.find(a => a.id === auctionId);
+        if (globalItem) {
+            globalItem.endsAt = updatedAuction.endsAt;
+            globalItem.highBidder = updatedAuction.highBidder;
+            globalItem.version = updatedAuction.version;
+            globalItem.currentPrice = updatedAuction.currentPrice;
         }
 
         if (auctionState.endsAt && endMs > auctionState.endsAt + 1000) {
@@ -65,7 +72,7 @@ function connectToGlobalStream() {
         }
 
         const bidsElement = document.getElementById(`bids-${auctionId}`);
-        if (bidsElement) {
+        if (bidsElement && versionIncreased) {
             bidsElement.innerText = auctionState.version;
             bidsElement.classList.add('bg-blue-200', 'scale-110');
             setTimeout(() => bidsElement.classList.remove('bg-blue-200', 'scale-110'), 300);
@@ -84,9 +91,6 @@ function connectToGlobalStream() {
                 badgeElement.className = "mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-300 inline-block";
             }
         }
-
-        priceElement.innerText = `$${updatedAuction.currentPrice.toFixed(2)}`;
-        bidderElement.innerText = updatedAuction.highBidder || 'System';
 
         if (priceIncreased) {
             const bidInput = document.getElementById(`bid-amount-${auctionId}`);
