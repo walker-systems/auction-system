@@ -8,7 +8,7 @@
 </head>
 <body class="bg-gray-100 p-8 font-sans">
 
-<div class="max-w-6xl mx-auto">
+<div class="max-w-7xl mx-auto">
     <div class="flex justify-between items-center mb-6">
         <div>
             <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Live Storefront</h1>
@@ -18,8 +18,8 @@
             <button id="view-logs-btn" onclick="toggleTerminal()" disabled class="bg-gray-400 text-gray-200 font-mono text-sm py-3 px-6 rounded-lg shadow-lg transition transform cursor-not-allowed">
                 &gt;_ View Logs
             </button>
-            <button id="chaos-btn" onclick="toggleChaos()" class="w-48 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform hover:-translate-y-1">
-                🤖 Start Chaos
+            <button id="demo-btn" onclick="toggleDemo()" class="w-48 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform hover:-translate-y-1">
+                🚀 Start Demo
             </button>
             <button onclick="resetSystem()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform hover:-translate-y-1">
                 🔄 Reset System
@@ -27,47 +27,51 @@
         </div>
     </div>
 
-    <div id="chaos-banner" class="hidden bg-indigo-100 border-l-4 border-indigo-500 text-indigo-700 p-4 mb-8 rounded shadow-sm transition-all duration-500">
-        <p class="font-bold text-lg">🤖 Demo Swarm Active!</p>
-        <p>The bot network is currently flooding the storefront. Jump in, spam the bid button, and see if you can outsmart the AI Sentinel before the timers run out!</p>
+    <div class="grid grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center">
+            <span class="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Active Auctions</span>
+            <span id="stat-active" class="text-4xl font-black text-gray-800">0</span>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center">
+            <span class="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Total Bids Processed</span>
+            <span id="stat-bids" class="text-4xl font-black text-blue-600">0</span>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center">
+            <span class="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Network Throughput</span>
+            <span class="text-4xl font-black text-green-500"><span id="stat-tps">0</span> <span class="text-lg">Bids/sec</span></span>
+        </div>
     </div>
 
-    <div id="auction-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-12">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Item</th>
+                <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Current Price</th>
+                <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Total Bids</th>
+                <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Time Left</th>
+                <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
+            </tr>
+            </thead>
+            <tbody id="auction-tbody" class="bg-white divide-y divide-gray-200 font-mono text-sm">
+            </tbody>
+        </table>
     </div>
 </div>
-<footer class="mt-12 py-8 bg-white border-t border-gray-200">
-    <div class="max-w-6xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 text-gray-600">
-        <div>
-            <p class="font-bold text-gray-800 text-lg">Justin Walker</p>
-            <p class="text-sm">Backend Systems Engineer</p>
-            <a href="mailto:justinwalker.contact@gmail.com" class="text-indigo-600 hover:text-indigo-800 text-sm transition-colors">
-                justinwalker.contact@gmail.com
-            </a>
-        </div>
 
-        <div class="flex space-x-6">
-            <a href="https://walker-systems.github.io/" target="_blank" class="hover:text-indigo-600 transition-colors">
-                🌐 Portfolio
-            </a>
-            <a href="https://github.com/walker-systems" target="_blank" class="hover:text-indigo-600 transition-colors">
-                🐙 GitHub
-            </a>
-            <a href="https://www.linkedin.com/in/justin-walker-0403923b1/" target="_blank" class="hover:text-indigo-600 transition-colors">
-                💼 LinkedIn
-            </a>
-        </div>
-    </div>
-    <div class="text-center mt-6 text-xs text-gray-400">
-        &copy; 2026 Walker Systems. Built with Spring WebFlux, Redis & Tailwind.
-    </div>
+<footer class="mt-12 py-8 bg-white border-t border-gray-200">
 </footer>
 <div id="terminal-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-700 transition-transform duration-500 transform translate-y-full z-50 flex flex-col" style="height: 35vh;">
-    <div class="flex justify-between items-center bg-gray-800 px-4 py-2 text-gray-400 font-mono text-sm shadow-md">
-        <span>user@bidding-engine: ~/logs/server.log</span>
-        <button onclick="toggleTerminal()" class="text-gray-400 hover:text-white font-bold text-lg">&times;</button>
+    <div class="flex justify-between items-center p-2 bg-gray-800 border-b border-gray-700 shadow-md z-10">
+        <span class="text-green-400 font-mono text-sm font-bold flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+            System Console
+        </span>
+        <button onclick="toggleTerminal()" class="text-gray-400 hover:text-white font-bold px-3 py-1 rounded hover:bg-gray-700 transition">
+            Close &times;
+        </button>
     </div>
-    <div id="terminal-output" class="p-4 flex-grow overflow-y-auto font-mono text-xs md:text-sm text-gray-300 space-y-1">
-        <div class="text-green-500 mb-2">Connected to Reactive Log Stream...</div>
+    <div id="terminal-output" class="p-4 overflow-y-auto flex-grow text-xs text-gray-300 font-mono space-y-1">
     </div>
 </div>
 <script src="/js/ui.js"></script>

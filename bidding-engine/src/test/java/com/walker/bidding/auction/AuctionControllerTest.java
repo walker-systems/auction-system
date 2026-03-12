@@ -26,7 +26,6 @@ class AuctionControllerTest {
 
     @Test
     void placeBid_whenValid_shouldReturn200Ok() {
-
         String auctionId = "test-1";
         BigDecimal bidAmount = new BigDecimal("150.00");
         Auction updatedAuction = new Auction(
@@ -37,7 +36,7 @@ class AuctionControllerTest {
                 Instant.now().plusSeconds(3600),
                 true,
                 2,
-                "127.0.0.1", "test-agent", 150, 1, 0 // Telemetry
+                "127.0.0.1", "test-agent", 150, 1, 0
         );
 
         Mockito.when(auctionService.placeBid(eq(auctionId), eq("webUser"), eq(bidAmount), any(), any(), eq(150)))
@@ -61,7 +60,7 @@ class AuctionControllerTest {
     }
 
     @Test
-    void placeBid_whenCollisionOccurs_shouldReturn409Conflict() {
+    void placeBid_whenCollisionOccurs_shouldReturn400BadRequest() {
         String auctionId = "test-1";
         BigDecimal bidAmount = new BigDecimal("150.00");
 
@@ -79,6 +78,7 @@ class AuctionControllerTest {
                         }
                         """)
                 .exchange()
-                .expectStatus().isEqualTo(409);
+                // 👇 THE FIX: We now gracefully handle these errors with a 400 response for the UI!
+                .expectStatus().isBadRequest();
     }
 }

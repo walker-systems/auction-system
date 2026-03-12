@@ -2,6 +2,13 @@ let isTerminalOpen = false;
 let logEventSource = null;
 
 function toggleTerminal() {
+    const btn = document.getElementById('view-logs-btn');
+
+    if (!isTerminalOpen && btn && btn.disabled) {
+        console.warn("Terminal is locked until Demo starts.");
+        return;
+    }
+
     const terminal = document.getElementById('terminal-container');
     isTerminalOpen = !isTerminalOpen;
 
@@ -21,12 +28,18 @@ function startLogStream() {
         logEventSource.close();
     }
 
-    logEventSource = new EventSource('/api/admin/logs/stream');
+    const cacheBuster = new Date().getTime();
+    logEventSource = new EventSource(`/api/admin/logs/stream?t=${cacheBuster}`);
     const outputContainer = document.getElementById('terminal-output');
 
     logEventSource.onmessage = function(event) {
         const rawLog = event.data;
-        if (!rawLog) return; // Clean, simple check
+
+        if (rawLog !== "HEARTBEAT") {
+            console.log("SSE Payload Received:", rawLog);
+        }
+
+        if (!rawLog || rawLog === "HEARTBEAT" || rawLog.startsWith("IGNORE_ME")) return;
 
         const logDiv = document.createElement('div');
         logDiv.className = "whitespace-pre-wrap font-mono";
@@ -37,7 +50,7 @@ function startLogStream() {
             logDiv.classList.add("text-yellow-400");
         } else if (rawLog.includes("✅") || rawLog.includes("🎉") || rawLog.includes("🌱")) {
             logDiv.classList.add("text-green-400");
-        } else if (rawLog.includes("🤖") || rawLog.includes("📈")) {
+        } else if (rawLog.includes("🤖") || rawLog.includes("📈") || rawLog.includes("📡")) {
             logDiv.classList.add("text-purple-400");
         } else {
             logDiv.classList.add("text-gray-300");

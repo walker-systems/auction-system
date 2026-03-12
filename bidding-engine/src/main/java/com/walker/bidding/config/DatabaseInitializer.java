@@ -4,6 +4,7 @@ import com.walker.bidding.auction.Auction;
 import com.walker.bidding.auction.AuctionRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.redis.core.ReactiveRedisTemplate; // 👈 NEW IMPORT
 import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class DatabaseInitializer implements CommandLineRunner {
 
     private final AuctionRepository auctionRepository;
+    private final ReactiveRedisTemplate<String, String> redisTemplate; // 👈 NEW INJECTION
 
     private final List<String> DEMO_ITEMS = List.of(
             "Sony PlayStation 5 Pro", "Apple MacBook Pro M3 Max",
@@ -40,7 +42,8 @@ public class DatabaseInitializer implements CommandLineRunner {
     public Mono<Void> resetAndSeedDatabase() {
         log.info("🌱 Wiping old data and seeding database with realistic auctions...");
 
-        return auctionRepository.deleteAll()
+        return redisTemplate.delete("banned_users")
+                .then(auctionRepository.deleteAll())
                 .thenMany(Flux.fromIterable(DEMO_ITEMS)
                         .index()
                         .flatMap(tuple -> {

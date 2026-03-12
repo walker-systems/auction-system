@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
@@ -42,7 +44,12 @@ public class AdminController {
 
     @GetMapping(value = "/logs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> streamLogs() {
-        return logStreamService.getLogStream()
-                .map(log -> ServerSentEvent.builder(log).build());
+        Flux<ServerSentEvent<String>> logs = logStreamService.getLogStream()
+                .map(log -> ServerSentEvent.<String>builder().data(log).build());
+
+        Flux<ServerSentEvent<String>> keepAlive = Flux.interval(Duration.ofMillis(500))
+                .map(tick -> ServerSentEvent.<String>builder().data("HEARTBEAT").build());
+
+        return Flux.merge(logs, keepAlive);
     }
 }
