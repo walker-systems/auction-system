@@ -5,11 +5,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity; // 👈 NEW
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Map; // 👈 NEW
 import java.util.Optional;
 
 @RestController
@@ -19,6 +21,12 @@ import java.util.Optional;
 public class AuctionController {
 
     private final AuctionService auctionService;
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleExceptions(Exception e) {
+        String cleanMessage = e.getMessage() != null ? e.getMessage().replace("ERR ", "") : "Bid rejected by proxy engine";
+        return ResponseEntity.badRequest().body(Map.of("message", cleanMessage));
+    }
 
     @PostMapping("/{id}/bids")
     public Mono<Auction> placeBid(@PathVariable String id,
@@ -36,22 +44,18 @@ public class AuctionController {
         return auctionService.placeBid(id, request.bidder(), request.amount(), ipAddress, userAgent, request.reactionTimeMs());
     }
 
-    // Existing individual stream (kept for legacy/testing purposes)
     @GetMapping(value = "/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<Auction> streamAuctionUpdates(@PathVariable String id) {
         return auctionService.streamAuctionUpdates(id);
     }
 
-    // 👇 THE FIX: The new Global Multiplexed Stream Endpoint!
     @GetMapping(value = "/stream/all", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<Auction> streamAllAuctions() {
-        log.info("🌐 Client connected to Global Multiplexed Stream");
         return auctionService.streamAllAuctionUpdates();
     }
 
     @GetMapping
     public Flux<Auction> getAllAuctions() {
-        log.info("Fetching all active auctions for storefront");
         return auctionService.getAllAuctions();
     }
 

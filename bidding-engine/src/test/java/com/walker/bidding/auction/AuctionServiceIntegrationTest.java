@@ -55,7 +55,6 @@ class AuctionServiceIntegrationTest {
                 .then(auctionService.placeMaxBid(
                         testAuctionId, "bob", new BigDecimal("75.00"), "127.0.0.1", "TestAgent", 500));
 
-        // 3. Assert Bob wins at $51.00
         StepVerifier.create(bidProcess)
                 .expectNextMatches(auction ->
                         auction.highBidder().equals("bob") &&
@@ -67,8 +66,8 @@ class AuctionServiceIntegrationTest {
     void testSoftClose_extendsAuctionEndTime_whenBidPlacedNearEnd() {
         String testAuctionId = "test-auc-softclose";
 
-        // 1. Set the auction to end in exactly 30 seconds
-        Instant originalEndTime = Instant.now().plus(Duration.ofSeconds(30));
+        // 👇 THE FIX: Set the timer to 4 seconds so it lands inside the 5-second Danger Zone!
+        Instant originalEndTime = Instant.now().plus(Duration.ofSeconds(4));
 
         Auction newAuction = new Auction(
                 testAuctionId,

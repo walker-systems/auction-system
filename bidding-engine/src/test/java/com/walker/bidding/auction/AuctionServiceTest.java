@@ -8,6 +8,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveSetOperations;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -16,12 +18,19 @@ import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 @ExtendWith(MockitoExtension.class)
 class AuctionServiceTest {
 
     @Mock
     private AuctionRepository auctionRepository;
+
+    @Mock
+    private ReactiveRedisTemplate<String, String> redisTemplate;
+
+    @Mock
+    private ReactiveSetOperations<String, String> setOperations;
 
     @InjectMocks
     private AuctionService auctionService;
@@ -30,6 +39,11 @@ class AuctionServiceTest {
     void setUp() {
         Mockito.lenient().when(auctionRepository.publishUpdate(any(Auction.class)))
                 .thenReturn(Mono.just(1L));
+
+        // Mock the AI Sentinel Ban List Check
+        Mockito.lenient().when(redisTemplate.opsForSet()).thenReturn(setOperations);
+        Mockito.lenient().when(setOperations.isMember(eq("banned_users"), any(String.class)))
+                .thenReturn(Mono.just(false));
     }
 
     @Test
@@ -60,7 +74,6 @@ class AuctionServiceTest {
 
     @Test
     void placeBid_whenBidTooLow_shouldThrowError() {
-
         String auctionId = "testAuction";
         Auction auction = new Auction(
                 auctionId, "testItem", new BigDecimal("100.00"),
@@ -80,7 +93,6 @@ class AuctionServiceTest {
 
     @Test
     void placeBid_whenCollisionOccurs_shouldRetryAndSucceed() {
-
         String auctionId = "testAuction";
         Auction stateA = new Auction(
                 auctionId, "testItem", new BigDecimal("100.00"),
