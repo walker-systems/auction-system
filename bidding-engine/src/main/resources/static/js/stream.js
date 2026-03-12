@@ -15,24 +15,40 @@ function connectToGlobalStream() {
             bidTimestamps.push(Date.now());
         }
 
-        const rowElement = document.getElementById(`row-${auctionId}`);
-        const priceElement = document.getElementById(`price-${auctionId}`);
-        const bidderElement = document.getElementById(`bidder-${auctionId}`);
-        const userElement = document.getElementById(`username-${auctionId}`);
-        const currentUser = userElement ? userElement.value.trim() : "";
-
-        if (!auctionState || !priceElement || !bidderElement) return;
-
-        if (rowElement && updatedAuction.currentPrice > auctionState.currentPrice) {
-            rowElement.classList.add('bg-green-50');
-            setTimeout(() => rowElement.classList.remove('bg-green-50'), 400);
-        }
-
         let endMs;
         const rawTime = updatedAuction.endsAt;
         if (typeof rawTime === 'number') endMs = rawTime * 1000;
         else if (typeof rawTime === 'string' && !rawTime.includes('-')) endMs = parseFloat(rawTime) * 1000;
         else endMs = new Date(rawTime).getTime();
+
+        if (auctionState) {
+            auctionState.endsAt = endMs;
+            auctionState.highBidder = updatedAuction.highBidder || 'System';
+            auctionState.version = updatedAuction.version || 0;
+            auctionState.currentPrice = updatedAuction.currentPrice;
+
+            const globalItem = globalAllAuctions.find(a => a.id === auctionId);
+            if (globalItem) {
+                globalItem.endsAt = updatedAuction.endsAt;
+                globalItem.highBidder = updatedAuction.highBidder;
+                globalItem.version = updatedAuction.version;
+                globalItem.currentPrice = updatedAuction.currentPrice;
+            }
+        }
+
+        const rowElement = document.getElementById(`row-${auctionId}`);
+        const priceElement = document.getElementById(`price-${auctionId}`);
+        const bidderElement = document.getElementById(`bidder-${auctionId}`);
+
+        if (!auctionState || !priceElement || !rowElement) return;
+
+        const userElement = document.getElementById(`username-${auctionId}`);
+        const currentUser = userElement ? userElement.value.trim() : "";
+
+        if (updatedAuction.currentPrice > auctionState.currentPrice) {
+            rowElement.classList.add('bg-green-50');
+            setTimeout(() => rowElement.classList.remove('bg-green-50'), 400);
+        }
 
         if (auctionState.endsAt && endMs > auctionState.endsAt + 1000) {
             const timerEl = document.getElementById(`timer-${auctionId}`);
@@ -41,10 +57,6 @@ function connectToGlobalStream() {
                 setTimeout(() => timerEl.classList.remove('text-yellow-500', 'scale-110'), 500);
             }
         }
-
-        auctionState.endsAt = endMs;
-        auctionState.highBidder = updatedAuction.highBidder || 'System';
-        auctionState.version = updatedAuction.version || 0;
 
         const bidsElement = document.getElementById(`bids-${auctionId}`);
         if (bidsElement) {
@@ -69,7 +81,6 @@ function connectToGlobalStream() {
 
         if (updatedAuction.currentPrice > auctionState.currentPrice) {
             const bidInput = document.getElementById(`bid-amount-${auctionId}`);
-
             const requiredMinBid = parseFloat(calculateNextBid(updatedAuction.currentPrice));
 
             if(bidInput && parseFloat(bidInput.value) < requiredMinBid) {
@@ -79,7 +90,7 @@ function connectToGlobalStream() {
             priceElement.innerText = `$${updatedAuction.currentPrice.toFixed(2)}`;
             bidderElement.innerText = updatedAuction.highBidder || 'System';
         }
-        auctionState.currentPrice = updatedAuction.currentPrice;    };
+    };
 
     globalEventSource.onerror = function() {
         console.error("Global stream connection lost. Attempting to reconnect...");
