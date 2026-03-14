@@ -77,11 +77,7 @@ public class DatabaseInitializer {
                     String id = "auc-" + i;
                     CatalogItem item = catalog.get((i - 1) % catalog.size());
 
-                    double basePrice = Math.floor(item.startingPrice());
-                    double[] cents = {0.50, 0.95, 0.99};
-                    double snappedPrice = basePrice + cents[ThreadLocalRandom.current().nextInt(cents.length)];
-                    BigDecimal price = BigDecimal.valueOf(snappedPrice).setScale(2, RoundingMode.HALF_UP);
-
+                    BigDecimal price = BigDecimal.valueOf(item.startingPrice()).setScale(2, RoundingMode.HALF_UP);
                     long offsetSeconds;
                     if (i <= 3) {
                         offsetSeconds = ThreadLocalRandom.current().nextLong(30, 90);

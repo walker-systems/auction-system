@@ -6,12 +6,13 @@ let isDemoRunning = false;
 
 let globalAllAuctions = [];
 let currentPage = 1;
-const ITEMS_PER_PAGE = 12;
+let ITEMS_PER_PAGE = 12;
 
 let globalActiveCount = 0;
 let globalTotalBids = 0;
 let bidTimestamps = [];
 
+// Sorting State
 let sortField = 'endsAtMs';
 let sortAsc = true;
 
@@ -21,9 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const ctx = document.getElementById('telemetryChart');
     if (ctx) {
-        Chart.defaults.color = '#4b5563'; // text-gray-600
+        Chart.defaults.color = '#4b5563';
         Chart.defaults.font.family = 'monospace';
-        Chart.defaults.borderColor = '#1f2937'; // text-gray-800
+        Chart.defaults.borderColor = '#1f2937';
 
         telemetryChart = new Chart(ctx.getContext('2d'), {
             type: 'line',
@@ -33,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     {
                         label: 'P99 Latency (ms)',
                         data: Array(30).fill(0),
-                        borderColor: '#22c55e', // Neon Green
+                        borderColor: '#22c55e',
                         backgroundColor: 'rgba(34, 197, 94, 0.05)',
                         yAxisID: 'y',
                         fill: true,
@@ -44,9 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     {
                         label: 'Throughput (TPS)',
                         data: Array(30).fill(0),
-                        borderColor: '#4b5563', // Gray
+                        borderColor: '#ff4444', // 👈 FIX: Neon Red/Orange!
+                        backgroundColor: 'rgba(255, 68, 68, 0.05)',
                         borderDash: [2, 2],
                         yAxisID: 'y1',
+                        fill: true,
                         tension: 0.1,
                         pointRadius: 0,
                         borderWidth: 1
@@ -60,11 +63,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     y1: { type: 'linear', display: true, position: 'right', min: 0, suggestedMax: 200, grid: { drawOnChartArea: false }, title: { display: false } },
                     x: { display: false }
                 },
-                plugins: { legend: { position: 'top', labels: { boxWidth: 10 } } }
+                plugins: { legend: { position: 'top', labels: { boxWidth: 10 } }, tooltip: { enabled: false } }
             }
         });
     }
 });
+
+function updateItemsPerPage(val) {
+    ITEMS_PER_PAGE = parseInt(val);
+    renderPage(1);
+}
 
 function handleSort(field) {
     if (sortField === field) {
@@ -84,7 +92,7 @@ function updateSortIcons() {
         if (el) {
             if (f === sortField) {
                 el.innerText = sortAsc ? '↑' : '↓';
-                el.className = "text-green-500 ml-1";
+                el.className = "text-green-500 ml-1 font-bold";
             } else {
                 el.innerText = '↕';
                 el.className = "text-gray-800 group-hover:text-gray-500 ml-1 transition-colors";
@@ -202,14 +210,28 @@ setInterval(() => {
             }
             const tps = bidTimestamps.length;
 
+            const uniqueBidders = new Set();
+            for (const id in activeAuctions) {
+                const bidder = activeAuctions[id].highBidder;
+                if (bidder && bidder !== 'System' && bidder !== 'SYS') {
+                    uniqueBidders.add(bidder);
+                }
+            }
+
             const elP99 = document.getElementById('stat-p99');
             if (elP99) elP99.innerText = p99.toFixed(2);
+
             const elTps = document.getElementById('stat-tps');
             if (elTps) elTps.innerText = tps.toLocaleString();
+
             const elBids = document.getElementById('stat-bids');
             if (elBids) elBids.innerText = globalTotalBids.toLocaleString();
+
             const elActive = document.getElementById('stat-active');
             if (elActive) elActive.innerText = globalActiveCount.toLocaleString();
+
+            const elBidders = document.getElementById('stat-bidders');
+            if (elBidders) elBidders.innerText = uniqueBidders.size.toLocaleString();
 
             if (telemetryChart) {
                 telemetryChart.data.datasets[0].data.shift();

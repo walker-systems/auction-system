@@ -22,24 +22,28 @@
 <div class="max-w-7xl mx-auto">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b border-gray-800 pb-4">
         <div class="mb-4 md:mb-0">
-            <h1 class="text-3xl font-bold text-green-400 tracking-tighter" title="System Core">BIDSTREAM_</h1>
+            <h1 class="text-3xl font-bold text-green-400 tracking-tighter cursor-help" title="Core Execution Engine">BIDSTREAM_</h1>
             <p class="text-gray-500 text-xs mt-1 uppercase">High-Frequency Trading Terminal</p>
         </div>
 
         <div class="space-x-2 flex items-center">
-            <div class="flex flex-col items-end px-3 py-1 border-r border-gray-800" title="99th Percentile System Latency">
+            <div class="flex flex-col items-end px-3 py-1 border-r border-gray-800 cursor-help" title="99th Percentile System Latency: 99% of all Redis executing transactions finish faster than this time.">
                 <span class="text-[10px] text-gray-600">P99 LATENCY</span>
                 <span class="text-lg text-green-400"><span id="stat-p99">0.00</span><span class="text-xs text-gray-500 ml-1">ms</span></span>
             </div>
-            <div class="flex flex-col items-end px-3 py-1 border-r border-gray-800" title="Network TPS">
+            <div class="flex flex-col items-end px-3 py-1 border-r border-gray-800 cursor-help" title="Network Throughput: Total volume of algorithmic transactions evaluated per second.">
                 <span class="text-[10px] text-gray-600">THROUGHPUT</span>
                 <span class="text-lg text-green-400"><span id="stat-tps">0</span><span class="text-xs text-gray-500 ml-1">tps</span></span>
             </div>
-            <div class="flex flex-col items-end px-3 py-1 border-r border-gray-800" title="Cumulative Bids">
+            <div class="flex flex-col items-end px-3 py-1 border-r border-gray-800 cursor-help" title="Distinct market participants actively executing trades on the network.">
+                <span class="text-[10px] text-gray-600">PARTICIPANTS</span>
+                <span class="text-lg text-green-400" id="stat-bidders">0</span>
+            </div>
+            <div class="flex flex-col items-end px-3 py-1 border-r border-gray-800 cursor-help" title="Total cumulative trading volume processed since boot.">
                 <span class="text-[10px] text-gray-600">TOTAL VOL</span>
                 <span class="text-lg text-green-400" id="stat-bids">0</span>
             </div>
-            <div class="flex flex-col items-end px-3 py-1" title="Live Memory Items">
+            <div class="flex flex-col items-end px-3 py-1 cursor-help" title="Active financial instruments currently loaded in Redis memory.">
                 <span class="text-[10px] text-gray-600">ACTIVE</span>
                 <span class="text-lg text-green-400" id="stat-active">0</span>
             </div>
@@ -58,28 +62,33 @@
         </button>
     </div>
 
-    <div class="mb-4 bg-black border border-gray-800 p-2 h-48 hidden md:block">
-        <canvas id="telemetryChart"></canvas>
+    <div class="mb-4 bg-black border border-gray-800 p-2 hidden md:block relative">
+        <div class="absolute top-2 left-2 text-[10px] text-gray-500 cursor-help flex items-center z-10" title="System Load Analysis: This dual-axis telemetry visualization proves the architectural resilience of this reactive, non-blocking I/O model. It visually demonstrates that as Network Throughput (TPS) scales to simulate thousands of concurrent trading bots, the P99 System Latency remains stable. The application layer is effectively isolated from database bottlenecks.">
+            SYS_TELEMETRY <span class="text-green-500 ml-1 hover:text-green-300">[?]</span>
+        </div>
+        <div class="h-48 mt-4">
+            <canvas id="telemetryChart"></canvas>
+        </div>
     </div>
 
     <div id="storefront-grid" class="bg-black border border-gray-800 overflow-hidden">
         <table class="min-w-full divide-y divide-gray-800">
             <thead class="bg-[#050505] border-b border-gray-800">
             <tr>
-                <th onclick="handleSort('id')" class="px-4 py-2 text-left text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group">
+                <th onclick="handleSort('id')" class="px-4 py-2 text-left text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group select-none">
                     ID <span id="sort-id" class="text-gray-800 group-hover:text-gray-500 ml-1">↕</span>
                 </th>
-                <th onclick="handleSort('itemId')" class="px-4 py-2 text-left text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group">
+                <th onclick="handleSort('itemId')" class="px-4 py-2 text-left text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group select-none">
                     ASSET <span id="sort-itemId" class="text-gray-800 group-hover:text-gray-500 ml-1">↕</span>
                 </th>
-                <th onclick="handleSort('currentPrice')" class="px-4 py-2 text-left text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group">
+                <th onclick="handleSort('currentPrice')" class="px-4 py-2 text-left text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group select-none">
                     PRICE <span id="sort-currentPrice" class="text-gray-800 group-hover:text-gray-500 ml-1">↕</span>
                 </th>
-                <th onclick="handleSort('version')" class="px-4 py-2 text-center text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group">
+                <th onclick="handleSort('version')" class="px-4 py-2 text-center text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group select-none">
                     VOL <span id="sort-version" class="text-gray-800 group-hover:text-gray-500 ml-1">↕</span>
                 </th>
-                <th onclick="handleSort('endsAtMs')" class="px-4 py-2 text-right text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group">
-                    T-MINUS <span id="sort-endsAtMs" class="text-green-500 ml-1">↑</span>
+                <th onclick="handleSort('endsAtMs')" class="px-4 py-2 text-right text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group select-none">
+                    TIME REMAINING <span id="sort-endsAtMs" class="text-green-500 ml-1">↑</span>
                 </th>
                 <th class="px-4 py-2 text-center text-xs text-gray-600 font-normal">EXECUTE</th>
             </tr>
@@ -90,9 +99,20 @@
     </div>
 
     <div class="mt-4 flex justify-between items-center text-sm border border-gray-800 p-2">
-        <button id="prev-page-btn" onclick="changePage(-1)" class="text-gray-500 hover:text-green-400 disabled:opacity-30">&lt; PREV</button>
-        <span class="text-gray-600">PAGE <span id="current-page-display" class="text-green-500">1</span> / <span id="total-pages-display">1</span></span>
-        <button id="next-page-btn" onclick="changePage(1)" class="text-gray-500 hover:text-green-400 disabled:opacity-30">NEXT &gt;</button>
+        <div class="flex items-center gap-2">
+            <span class="text-gray-600 text-xs">ROWS:</span>
+            <select id="per-page-select" onchange="updateItemsPerPage(this.value)" class="bg-black border border-gray-700 text-green-500 text-xs py-1 focus:outline-none focus:border-green-500 cursor-pointer">
+                <option value="12">12</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+        <div class="flex items-center gap-4">
+            <button id="prev-page-btn" onclick="changePage(-1)" class="text-gray-500 hover:text-green-400 disabled:opacity-30">&lt; PREV</button>
+            <span class="text-gray-600">PAGE <span id="current-page-display" class="text-green-500">1</span> / <span id="total-pages-display">1</span></span>
+            <button id="next-page-btn" onclick="changePage(1)" class="text-gray-500 hover:text-green-400 disabled:opacity-30">NEXT &gt;</button>
+        </div>
     </div>
 
     <footer class="mt-12 pt-4 border-t border-gray-800 text-xs text-gray-600 flex justify-between items-center">
@@ -111,7 +131,7 @@
             [X]
         </button>
     </div>
-    <div id="terminal-output" class="flex-1 overflow-y-auto p-4 text-xs bg-black"></div>
+    <div id="terminal-output" class="flex-1 overflow-y-auto p-4 text-xs bg-black custom-scrollbar"></div>
 </div>
 
 <script src="/js/app.js"></script>
