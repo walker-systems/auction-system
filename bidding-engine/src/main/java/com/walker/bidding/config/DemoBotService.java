@@ -53,10 +53,15 @@ public class DemoBotService {
             log.info("Bots are already running!");
             return;
         }
-        log.info("🤖 Demo Bot Swarm ACTIVATED!");
+        log.info("🤖 Demo Bot Swarm ACTIVATED! Unleashing 250+ TPS...");
 
-        botTask = Flux.interval(Duration.ofMillis(100), Duration.ofMillis(250))
-                .flatMap(tick -> placeRandomBid())
+        botTask = Flux.range(1, 25)
+                .flatMap(concurrency -> Flux.interval(
+                                        Duration.ofMillis(ThreadLocalRandom.current().nextInt(100)),
+                                        Duration.ofMillis(100)
+                                )
+                                .flatMap(tick -> placeRandomBid())
+                )
                 .subscribe();
     }
 
@@ -71,9 +76,12 @@ public class DemoBotService {
         if (botSwarm == null || botSwarm.isEmpty()) return Mono.empty();
 
         int roll = ThreadLocalRandom.current().nextInt(100);
-        int targetNum = (roll < 85)
-                ? ThreadLocalRandom.current().nextInt(1, 25)
-                : ThreadLocalRandom.current().nextInt(25, 10001);
+        int targetNum;
+        if (roll < 15) {
+            targetNum = ThreadLocalRandom.current().nextInt(1, 13);      // Page 1
+        } else {
+            targetNum = ThreadLocalRandom.current().nextInt(13, 10001);  // The Long Tail
+        }
 
         String targetId = "auc-" + targetNum;
 
@@ -84,14 +92,11 @@ public class DemoBotService {
                     BotPersona bot = botSwarm.get(ThreadLocalRandom.current().nextInt(botSwarm.size()));
 
                     BigDecimal minIncrement = BidIncrementCalculator.getIncrement(target.currentPrice());
-                    double multiplier = 1.0 + ThreadLocalRandom.current().nextInt(5);
+                    double multiplier = 1.0 + ThreadLocalRandom.current().nextInt(3);
 
                     BigDecimal bidAmount = target.currentPrice()
                             .add(minIncrement.multiply(BigDecimal.valueOf(multiplier)))
                             .setScale(2, RoundingMode.HALF_UP);
-
-                    log.info("🤖 Bot '{}' bidding ${} on {} (Reaction: {}ms)",
-                            bot.bidderId(), bidAmount, targetId, bot.baseReactionTimeMs());
 
                     return auctionService.placeMaxBid(
                             target.id(),

@@ -1,3 +1,5 @@
+let isSeeding = true;
+
 function loadStorefront() {
     const loadingText = document.getElementById('loading-text');
 
@@ -6,8 +8,8 @@ function loadStorefront() {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
         })
-        .then(isSeeding => {
-            if (isSeeding === true) {
+        .then(isBackendSeeding => {
+            if (isBackendSeeding === true) {
                 if (loadingText) loadingText.innerText = "Seeding Redis Database... Please wait.";
                 setTimeout(loadStorefront, 1000);
                 return;
@@ -26,12 +28,20 @@ function loadStorefront() {
                     }
 
                     auctions.forEach(auction => {
-                        let endMs;
-                        const rawTime = auction.endsAt;
-                        if (typeof rawTime === 'number') endMs = rawTime * 1000;
-                        else if (typeof rawTime === 'string' && !rawTime.includes('-')) endMs = parseFloat(rawTime) * 1000;
-                        else endMs = new Date(rawTime).getTime();
-                        auction.endsAtMs = endMs;
+                        let endMs = Date.now() + 86400000;
+                        if (auction.endsAt) {
+                            if (typeof auction.endsAt === 'number') {
+                                endMs = auction.endsAt > 99999999999 ? auction.endsAt : auction.endsAt * 1000;
+                            } else if (typeof auction.endsAt === 'string') {
+                                if (auction.endsAt.includes('-')) {
+                                    endMs = new Date(auction.endsAt).getTime();
+                                } else {
+                                    const parsed = parseFloat(auction.endsAt);
+                                    endMs = parsed > 99999999999 ? parsed : parsed * 1000;
+                                }
+                            }
+                        }
+                        auction.endsAtMs = isNaN(endMs) ? Date.now() + 86400000 : endMs;
                     });
 
                     auctions.sort((a, b) => a.endsAtMs - b.endsAtMs);
@@ -52,25 +62,34 @@ function loadStorefront() {
                         };
                     });
 
-                    renderPage(1);
-                    connectToGlobalStream();
+                    if (typeof renderPage === 'function') renderPage(1);
+                    if (typeof connectToGlobalStream === 'function') connectToGlobalStream();
 
                     if (typeof clockInterval !== 'undefined') clearInterval(clockInterval);
-
                     clockInterval = setInterval(() => {
                         const now = Date.now();
+
+                        if (globalAllAuctions && globalAllAuctions.length > 0) {
+                            const originalLength = globalAllAuctions.length;
+                            globalAllAuctions = globalAllAuctions.filter(a => (a.endsAtMs + 4000) > now);
+                            if (globalAllAuctions.length < originalLength && typeof renderPage === 'function') {
+                                renderPage(currentPage);
+                            }
+                        }
+
+                        globalActiveCount = globalAllAuctions.length;
 
                         for (const id in activeAuctions) {
                             const auction = activeAuctions[id];
                             const timerEl = auction.timerEl || document.getElementById(`timer-${id}`);
                             if (!timerEl) continue;
 
-                            if (!auction.timerEl) auction.timerEl = timerEl; // Cache it
+                            if (!auction.timerEl) auction.timerEl = timerEl;
 
                             const diff = auction.endsAt - now;
                             if (diff <= 0) {
                                 timerEl.innerText = "Expired";
-                                timerEl.classList.add("text-red-500", "font-black");
+                                timerEl.className = "text-gray-400 font-black text-lg";
                                 continue;
                             }
 
@@ -84,18 +103,10 @@ function loadStorefront() {
 
                             if (diff < 15000) {
                                 timerEl.innerText = `⏳ ${timeStr}`;
-                                timerEl.classList.add("text-red-500", "font-bold");
+                                timerEl.className = "text-red-600 font-bold text-lg animate-pulse";
                             } else {
                                 timerEl.innerText = timeStr;
-                                timerEl.classList.remove("text-red-500", "font-bold");
-                            }
-                        }
-
-                        if (globalAllAuctions && globalAllAuctions.length > 0) {
-                            const originalLength = globalAllAuctions.length;
-                            globalAllAuctions = globalAllAuctions.filter(a => a.endsAtMs > now);
-                            if (globalAllAuctions.length < originalLength && typeof renderPage === 'function') {
-                                renderPage(currentPage);
+                                timerEl.className = "text-gray-700 font-bold text-lg";
                             }
                         }
                     }, 1000);
@@ -115,19 +126,18 @@ function loadStorefront() {
 
 function toggleDemo() {
     const btn = document.getElementById('demo-btn');
-
     if (typeof unlockLogsButton === 'function') unlockLogsButton();
 
     if (!isDemoRunning) {
         fetch('/api/admin/start-bots', { method: 'POST' });
         isDemoRunning = true;
-        btn.innerHTML = '◼ Stop Demo';
+        btn.innerHTML = 'Stop Demo';
         btn.classList.replace('bg-blue-600', 'bg-red-600');
         btn.classList.replace('hover:bg-blue-700', 'hover:bg-red-700');
     } else {
         fetch('/api/admin/stop-bots', { method: 'POST' });
         isDemoRunning = false;
-        btn.innerHTML = '⏻ Start Demo';
+        btn.innerHTML = 'Start Demo';
         btn.classList.replace('bg-red-600', 'bg-blue-600');
         btn.classList.replace('hover:bg-red-700', 'hover:bg-blue-700');
     }
@@ -144,17 +154,15 @@ function resetSystem() {
     `);
 
     fetch('/api/admin/reset', { method: 'POST' }).then(() => {
-        setTimeout(() => {
-            window.location.reload(true);
-        }, 1500);
+        setTimeout(() => { window.location.reload(true); }, 1500);
     });
 }
 
 function placeBid(auctionId) {
     const username = document.getElementById(`username-${auctionId}`).value;
     const bidInput = document.getElementById(`bid-amount-${auctionId}`);
-
     const amount = parseFloat(bidInput.value);
+
     bidInput.value = calculateNextBid(amount);
 
     const payload = {
@@ -192,7 +200,7 @@ function placeBid(auctionId) {
                 bidInput.value = parseFloat(minBidMatch[1]).toFixed(2);
             }
         } else {
-            if (activeAuctions[auctionId] && username === 'demo_user') {
+            if (activeAuctions[auctionId] && username === 'You') {
                 activeAuctions[auctionId].myMaxBid = amount;
             }
             showCardToast(auctionId, "Accepted!", "bg-green-600");
