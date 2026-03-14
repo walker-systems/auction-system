@@ -23,11 +23,16 @@ public class FraudListener {
         redisTemplate.listenTo(ChannelTopic.of("auction:fraud"))
                 .map(message -> message.getMessage().split(":"))
                 .filter(parts -> parts.length == 2)
-                .flatMap(parts -> auctionService.revertFraudulentBid(parts[0], parts[1])
-                        .doOnSuccess(_ -> log.info("✅ Revert successfully committed..."))
-                        .doOnError(err -> log.error("Failed to revert bid: ", err))
-                        .onErrorResume(_ -> Mono.empty())
-                )
+                .flatMap(parts -> {
+                    String auctionId = parts[0];
+                    String username = parts[1];
+
+                    log.warn("🚨 AI SENTINEL ALERT: Bot '{}' has been banned! Reverting price on {}...", username, auctionId);
+
+                    return auctionService.revertFraudulentBid(auctionId, username)
+                            .doOnSuccess(_ -> log.info("✅ Revert successfully committed for {}...", auctionId))
+                            .doOnError(err -> log.error("Failed to revert bid: ", err))
+                            .onErrorResume(_ -> Mono.empty());
+                })
                 .subscribe();
-    }
-}
+    }}
