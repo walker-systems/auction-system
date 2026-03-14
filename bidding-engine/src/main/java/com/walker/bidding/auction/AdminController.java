@@ -23,6 +23,12 @@ public class AdminController {
     private final DemoBotService demoBotService;
     private final DatabaseInitializer databaseInitializer;
     private final LogStreamService logStreamService;
+    private final AuctionService auctionService;
+
+    @GetMapping("/seeding-status")
+    public Mono<Boolean> checkSeedingStatus() {
+        return Mono.just(databaseInitializer.isSeeding());
+    }
 
     @PostMapping("/start-bots")
     public Mono<Void> startBots() {
@@ -39,7 +45,8 @@ public class AdminController {
     @PostMapping("/reset")
     public Mono<Void> resetSystem() {
         demoBotService.stopBotSwarm();
-        return databaseInitializer.resetAndSeedDatabase();
+        databaseInitializer.resetAndSeedDatabase().subscribe();
+        return Mono.empty();
     }
 
     @GetMapping(value = "/logs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -51,5 +58,12 @@ public class AdminController {
                 .map(tick -> ServerSentEvent.<String>builder().data("HEARTBEAT").build());
 
         return Flux.merge(logs, keepAlive);
+    }
+
+    @GetMapping("/telemetry")
+    public Mono<java.util.Map<String, Object>> getTelemetry() {
+        return Mono.just(java.util.Map.of(
+                "p99LatencyMs", auctionService.getP99LatencyMs()
+        ));
     }
 }

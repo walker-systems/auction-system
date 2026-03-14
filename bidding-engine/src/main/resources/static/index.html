@@ -3,103 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reactive Bidding Engine</title>
+    <title>BidStream Terminal</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="data:,">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .terminal-row:nth-child(even) { background-color: #0a0a0a; }
+        .terminal-row:nth-child(odd) { background-color: #000000; }
+        .terminal-row:hover { background-color: #1a1a1a !important; }
+    </style>
 </head>
-<body class="bg-gray-100 p-8 font-sans">
+<body class="bg-black p-4 font-mono text-green-500 selection:bg-green-900">
+<div id="loading-overlay" class="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center transition-opacity duration-500">
+    <div class="animate-pulse text-green-500 text-2xl mb-4">Establishing Secure Connection...</div>
+    <p class="text-gray-500 text-sm" id="loading-text">BOOT SEQUENCE INITIATED</p>
+</div>
 
 <div class="max-w-7xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Live Storefront</h1>
-            <p class="text-gray-600">Powered by Spring WebFlux & Redis</p>
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b border-gray-800 pb-4">
+        <div class="mb-4 md:mb-0">
+            <h1 class="text-3xl font-bold text-green-400 tracking-tighter" title="System Core">BIDSTREAM_</h1>
+            <p class="text-gray-500 text-xs mt-1 uppercase">High-Frequency Trading Terminal</p>
         </div>
-        <div class="space-x-4 flex items-center">
-            <button id="view-logs-btn" onclick="toggleTerminal()" disabled class="bg-gray-400 text-gray-200 font-mono text-sm py-3 px-6 rounded-lg shadow-lg transition transform cursor-not-allowed">
-                &gt;_ View Logs
-            </button>
-            <button id="demo-btn" onclick="toggleDemo()" class="w-48 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform hover:-translate-y-1">
-                🚀 Start Demo
-            </button>
-            <button onclick="resetSystem()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform hover:-translate-y-1">
-                🔄 Reset System
-            </button>
+
+        <div class="space-x-2 flex items-center">
+            <div class="flex flex-col items-end px-3 py-1 border-r border-gray-800" title="99th Percentile System Latency">
+                <span class="text-[10px] text-gray-600">P99 LATENCY</span>
+                <span class="text-lg text-green-400"><span id="stat-p99">0.00</span><span class="text-xs text-gray-500 ml-1">ms</span></span>
+            </div>
+            <div class="flex flex-col items-end px-3 py-1 border-r border-gray-800" title="Network TPS">
+                <span class="text-[10px] text-gray-600">THROUGHPUT</span>
+                <span class="text-lg text-green-400"><span id="stat-tps">0</span><span class="text-xs text-gray-500 ml-1">tps</span></span>
+            </div>
+            <div class="flex flex-col items-end px-3 py-1 border-r border-gray-800" title="Cumulative Bids">
+                <span class="text-[10px] text-gray-600">TOTAL VOL</span>
+                <span class="text-lg text-green-400" id="stat-bids">0</span>
+            </div>
+            <div class="flex flex-col items-end px-3 py-1" title="Live Memory Items">
+                <span class="text-[10px] text-gray-600">ACTIVE</span>
+                <span class="text-lg text-green-400" id="stat-active">0</span>
+            </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-3 gap-6 mb-8">
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center">
-            <span class="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Active Auctions</span>
-            <span id="stat-active" class="text-4xl font-black text-gray-800">0</span>
-        </div>
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center">
-            <span class="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Total Bids Processed</span>
-            <span id="stat-bids" class="text-4xl font-black text-blue-600">0</span>
-        </div>
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center">
-            <span class="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Network Throughput</span>
-            <span class="text-4xl font-black text-green-500"><span id="stat-tps">0</span> <span class="text-lg">Bids/sec</span></span>
-        </div>
+    <div class="flex gap-2 mb-4 text-sm">
+        <button id="view-logs-btn" onclick="toggleTerminal()" class="bg-black border border-gray-700 text-gray-400 py-1 px-4 hover:border-green-500 hover:text-green-400 transition-colors" title="Open real-time system logs">
+            [ VIEW LOGS ]
+        </button>
+        <button id="demo-btn" onclick="toggleDemo()" class="bg-black border border-green-800 text-green-500 py-1 px-4 hover:bg-green-900 hover:text-black transition-colors" title="Simulate heavy network load">
+            [ START DEMO ]
+        </button>
+        <button onclick="resetSystem()" class="bg-black border border-gray-700 text-gray-500 py-1 px-4 hover:border-gray-400 hover:text-gray-300 transition-colors" title="Flush DB and rebuild">
+            [ RESET ]
+        </button>
     </div>
 
-    <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-12">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+    <div class="mb-4 bg-black border border-gray-800 p-2 h-48 hidden md:block">
+        <canvas id="telemetryChart"></canvas>
+    </div>
+
+    <div id="storefront-grid" class="bg-black border border-gray-800 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-800">
+            <thead class="bg-[#050505] border-b border-gray-800">
             <tr>
-                <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Item</th>
-                <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Current Price</th>
-                <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Total Bids</th>
-                <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Time Left</th>
-                <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
+                <th onclick="handleSort('id')" class="px-4 py-2 text-left text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group">
+                    ID <span id="sort-id" class="text-gray-800 group-hover:text-gray-500 ml-1">↕</span>
+                </th>
+                <th onclick="handleSort('itemId')" class="px-4 py-2 text-left text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group">
+                    ASSET <span id="sort-itemId" class="text-gray-800 group-hover:text-gray-500 ml-1">↕</span>
+                </th>
+                <th onclick="handleSort('currentPrice')" class="px-4 py-2 text-left text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group">
+                    PRICE <span id="sort-currentPrice" class="text-gray-800 group-hover:text-gray-500 ml-1">↕</span>
+                </th>
+                <th onclick="handleSort('version')" class="px-4 py-2 text-center text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group">
+                    VOL <span id="sort-version" class="text-gray-800 group-hover:text-gray-500 ml-1">↕</span>
+                </th>
+                <th onclick="handleSort('endsAtMs')" class="px-4 py-2 text-right text-xs text-gray-600 font-normal cursor-pointer hover:text-green-500 group">
+                    T-MINUS <span id="sort-endsAtMs" class="text-green-500 ml-1">↑</span>
+                </th>
+                <th class="px-4 py-2 text-center text-xs text-gray-600 font-normal">EXECUTE</th>
             </tr>
             </thead>
-            <tbody id="auction-tbody" class="bg-white divide-y divide-gray-200 font-mono text-sm">
+            <tbody id="auctions-tbody" class="divide-y divide-gray-900">
             </tbody>
         </table>
     </div>
 
-    <div class="flex items-center justify-between bg-white px-6 py-3 border border-gray-200 rounded-xl shadow-sm mb-12">
-        <button id="prev-page-btn" onclick="changePage(-1)" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition">
-            Previous
-        </button>
-        <div class="hidden sm:block">
-            <p class="text-sm text-gray-700 font-medium">
-                Page <span id="current-page-display" class="font-bold text-blue-600">1</span> of <span id="total-pages-display" class="font-bold">1</span>
-            </p>
-        </div>
-        <button id="next-page-btn" onclick="changePage(1)" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition">
-            Next
-        </button>
+    <div class="mt-4 flex justify-between items-center text-sm border border-gray-800 p-2">
+        <button id="prev-page-btn" onclick="changePage(-1)" class="text-gray-500 hover:text-green-400 disabled:opacity-30">&lt; PREV</button>
+        <span class="text-gray-600">PAGE <span id="current-page-display" class="text-green-500">1</span> / <span id="total-pages-display">1</span></span>
+        <button id="next-page-btn" onclick="changePage(1)" class="text-gray-500 hover:text-green-400 disabled:opacity-30">NEXT &gt;</button>
     </div>
+
+    <footer class="mt-12 pt-4 border-t border-gray-800 text-xs text-gray-600 flex justify-between items-center">
+        <a href="https://walker-systems.github.io/" target="_blank" class="hover:text-green-400 transition-colors">JUSTIN WALKER</a>
+        <span>POWERED BY SPRING WEBFLUX / REDIS</span>
+    </footer>
 </div>
 
-<footer class="mt-12 py-8 bg-white border-t border-gray-200">
-    <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center">
-        <div class="mb-4 md:mb-0">
-            <span class="text-xl font-black text-gray-800 tracking-tight">BID<span class="text-blue-600">STREAM</span></span>
-            <p class="text-sm text-gray-500 mt-1">High-Frequency Trading Dashboard</p>
-        </div>
-        <div class="text-sm text-gray-400 font-mono">
-            Powered by Spring WebFlux • Redis • Multiplexed SSE
-        </div>
-    </div>
-</footer><div id="terminal-container" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t-4 border-gray-700 transition-transform duration-500 transform translate-y-full z-50 flex flex-col" style="height: 35vh;">
-    <div class="flex justify-between items-center p-2 bg-gray-800 border-b border-gray-700 shadow-md z-10">
-        <span class="text-green-400 font-mono text-sm font-bold flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-            System Console
+<div id="terminal-container" class="fixed bottom-0 left-0 w-full bg-black border-t border-green-900 transition-transform duration-500 transform translate-y-full z-50 flex flex-col" style="height: 35vh;">
+    <div class="flex justify-between items-center p-1 px-4 bg-[#050505] border-b border-gray-800">
+        <span class="text-gray-500 text-xs flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+            SYS.LOG
         </span>
-        <button onclick="toggleTerminal()" class="text-gray-400 hover:text-white font-bold px-3 py-1 rounded hover:bg-gray-700 transition">
-            Close &times;
+        <button onclick="toggleTerminal()" class="text-gray-500 hover:text-green-400 text-xs">
+            [X]
         </button>
     </div>
-    <div id="terminal-output" class="p-4 overflow-y-auto flex-grow text-xs text-gray-300 font-mono space-y-1">
-    </div>
+    <div id="terminal-output" class="flex-1 overflow-y-auto p-4 text-xs bg-black"></div>
 </div>
-<script src="/js/ui.js"></script>
-<script src="/js/stream.js"></script>
-<script src="/js/api.js"></script>
+
 <script src="/js/app.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/stream.js"></script>
+<script src="/js/ui.js"></script>
 <script src="/js/logs.js"></script>
 </body>
 </html>

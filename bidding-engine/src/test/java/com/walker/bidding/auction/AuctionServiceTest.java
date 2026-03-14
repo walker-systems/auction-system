@@ -20,6 +20,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.mockito.Spy;
+
 @ExtendWith(MockitoExtension.class)
 class AuctionServiceTest {
 
@@ -32,15 +36,19 @@ class AuctionServiceTest {
     @Mock
     private ReactiveSetOperations<String, String> setOperations;
 
+    @Spy
+    private MeterRegistry meterRegistry = new SimpleMeterRegistry();
+
     @InjectMocks
     private AuctionService auctionService;
 
     @BeforeEach
     void setUp() {
+        auctionService.initMetrics();
+
         Mockito.lenient().when(auctionRepository.publishUpdate(any(Auction.class)))
                 .thenReturn(Mono.just(1L));
 
-        // Mock the AI Sentinel Ban List Check
         Mockito.lenient().when(redisTemplate.opsForSet()).thenReturn(setOperations);
         Mockito.lenient().when(setOperations.isMember(eq("banned_users"), any(String.class)))
                 .thenReturn(Mono.just(false));

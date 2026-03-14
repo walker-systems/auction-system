@@ -1,9 +1,11 @@
 package com.walker.bidding.auction;
 
+import com.walker.bidding.config.DatabaseInitializer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -13,6 +15,7 @@ import reactor.test.StepVerifier;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+
 
 @SpringBootTest
 @Testcontainers
@@ -28,6 +31,9 @@ class AuctionServiceIntegrationTest {
 
     @Autowired
     private AuctionRepository auctionRepository;
+
+    @MockitoBean
+    private DatabaseInitializer databaseInitializer;
 
     @Test
     void testProxyBidding_outbidsCompetitor_andIncrementsPrice() {

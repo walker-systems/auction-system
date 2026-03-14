@@ -1,9 +1,11 @@
 package com.walker.bidding.auction;
 
+import com.walker.bidding.config.DatabaseInitializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.testcontainers.containers.GenericContainer;
@@ -29,6 +31,9 @@ public class AuctionRepositoryTest {
 
     @Autowired
     private ReactiveStringRedisTemplate stringTemplate;
+
+    @MockitoBean
+    private DatabaseInitializer databaseInitializer;
 
     @BeforeEach
     void setUp() {
