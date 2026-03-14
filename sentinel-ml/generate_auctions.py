@@ -1,41 +1,56 @@
 import json
 import random
 
-adjectives = [
-    "Vintage", "Refurbished", "Brand New", "Limited Edition", "Signed",
-    "Antique", "Factory Sealed", "Custom", "Mint Condition", "Rare",
-    "Matte Black", "Rose Gold", "Stainless Steel", "Portable", "Wireless",
-    "Smart", "Ergonomic", "Heavy Duty", "Minimalist", "Retro", "Tactical",
-    "Professional", "Ultra-Slim", "Waterproof", "Open Box"
+tickers = [
+    "AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "META", "GOOGL", "JPM", "GS", "BAC", "V", "MA",
+    "SPY", "QQQ", "IWM", "VIX", "BTC", "ETH", "SOL", "XRP", "ADA", "AVAX", "LINK", "DOGE",
+    "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CHF", "GOLD", "SILVER", "PLATINUM", "COPPER",
+    "WTI", "BRENT", "NATGAS", "CORN", "SOYBEAN", "WHEAT", "US10Y", "US2Y", "US30Y", "BUND",
+    "JGB", "GILT", "OIS", "CDX", "MBS", "LIBOR", "NFLX", "DIS", "UBER", "INTC", "AMD",
+    "CRM", "NOW", "SNOW", "PLTR", "XOM", "CVX", "OXY", "LLY", "NVO", "JNJ", "UNH", "WMT",
+    "COST", "HD", "MCD", "PEP", "KO", "SBUX", "TGT", "BA", "CAT", "LMT", "DE", "MMM"
 ]
 
-brands = [
-    "Sony", "Apple", "NVIDIA", "Herman Miller", "La Marzocco",
-    "Rolex", "Samsung", "LG", "Nike", "Tesla", "Omega", "Nintendo",
-    "Canon", "Bose", "Dyson", "Logitech", "Razer", "Patagonia", "Yeti",
-    "Breville", "Brembo", "Sennheiser", "Garmin", "Fender", "Leica"
-]
-
-nouns = [
-    "Monitor", "Keyboard", "GPU", "Chair", "Espresso Machine",
-    "Watch", "Smartphone", "Laptop", "Sneakers", "Hoverboard", "Camera",
-    "Headphones", "Microphone", "Tablet", "Drone", "Backpack", "Desk",
-    "Synthesizer", "Projector", "Telescope", "Router", "Amplifier",
-    "Smartwatch", "Lens", "Console"
-]
+types = ["BLK", "DARK", "C", "P", "FUT", "PERP", "SPOT", "SWAP", "FWD", "OPT"]
+sizes = ["10K", "25K", "50K", "100K", "250K", "1M", "5M"]
+months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC", "0DTE", "1DTE"]
 
 def generate_catalog(num_items):
     catalog = []
     seen_names = set()
 
-    # 25 * 25 * 25 = 15,625 possible unique combinations
     while len(catalog) < num_items:
-        name = f"{random.choice(adjectives)} {random.choice(brands)} {random.choice(nouns)}"
+        ticker = random.choice(tickers)
+        instr = random.choice(types)
+
+        if instr in ["C", "P", "OPT"]:
+            strike = random.randint(10, 500) * 5
+            suffix = random.choice(months)
+            name = f"{ticker}-{instr}{strike}-{suffix}"
+        elif instr in ["FUT", "FWD"]:
+            suffix = random.choice(months)
+            name = f"{ticker}-{instr}-{suffix}"
+        else:
+            suffix = random.choice(sizes)
+            name = f"{ticker}-{instr}-{suffix}"
 
         if name not in seen_names:
             seen_names.add(name)
-            # Generate a realistic starting price
-            price = round(random.uniform(10.0, 800.0), 2)
+
+            if instr in ["C", "P", "OPT"]:
+                price = round(random.uniform(0.1, 85.0), 2)
+            elif ticker == "BTC":
+                price = round(random.uniform(62000.0, 71000.0), 2)
+            elif ticker == "ETH":
+                price = round(random.uniform(3000.0, 4000.0), 2)
+            elif "USD" in ticker or ticker in ["EUR/GBP"]:
+                price = round(random.uniform(0.5, 1.5), 4)
+            elif ticker in ["GOLD", "PALLADIUM"]:
+                price = round(random.uniform(1800.0, 2400.0), 2)
+            elif ticker in ["SILVER", "COPPER", "WTI", "BRENT"]:
+                price = round(random.uniform(20.0, 90.0), 2)
+            else:
+                price = round(random.uniform(10.0, 600.0), 2)
 
             catalog.append({
                 "itemId": name,
@@ -45,8 +60,7 @@ def generate_catalog(num_items):
     return catalog
 
 if __name__ == "__main__":
-    # Generate 10,000 unique items
-    items = generate_catalog(10000)
+    catalog = generate_catalog(10000)
     with open("../bidding-engine/src/main/resources/auctions_catalog.json", "w") as f:
-        json.dump(items, f, indent=2)
-    print(f"📦 Successfully generated {len(items)} unique auctions in auctions_catalog.json!")
+        json.dump(catalog, f, indent=2)
+    print(f"✅ Generated {len(catalog)} financial instruments!")
