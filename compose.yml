@@ -1,18 +1,57 @@
+version: '3.8'
+
 services:
   redis:
-    image: redis/redis-stack:latest
-    container_name: bidding-redis
+    image: redis:7.2-alpine
     ports:
       - "6379:6379"
-      - "8001:8001"
-    restart: always
+    networks:
+      - bidstream-net
+    command: redis-server --save 60 1 --loglevel warning
 
   sentinel-ml:
-    build: 
-      context: ./sentinel-ml 
-    container_name: sentinel-ml-service
+    build:
+      context: ./sentinel-ml
     ports:
       - "8000:8000"
-    restart: always
+    networks:
+      - bidstream-net
+    restart: unless-stopped
+
+  sentinel-service:
+    build:
+      context: .
+      dockerfile: sentinel-service/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - ML_SERVICE_URL=http://sentinel-ml:8000
+      - JAVA_TOOL_OPTIONS=-Xmx256m -Xms256m
+    networks:
+      - bidstream-net
     depends_on:
       - redis
+      - sentinel-ml
+    restart: unless-stopped
+
+  bidding-engine:
+    build:
+      context: .
+      dockerfile: bidding-engine/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - JAVA_TOOL_OPTIONS=-Xmx256m -Xms256m
+    networks:
+      - bidstream-net
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+networks:
+  bidstream-net:
+    driver: bridge
