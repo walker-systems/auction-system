@@ -41,8 +41,8 @@ public class DatabaseInitializer {
     public void init() {
         try {
             ObjectMapper mapper = new ObjectMapper();
-            InputStream is = new ClassPathResource("auctions_catalog.json").getInputStream();
-            catalog = mapper.readValue(is, new TypeReference<List<CatalogItem>>() {});
+            InputStream iS = new ClassPathResource("auctions_catalog.json").getInputStream();
+            catalog = mapper.readValue(iS, new TypeReference<>() {});
             log.info("📦 Successfully loaded {} unique items from catalog.", catalog.size());
         } catch (Exception e) {
             log.error("Failed to load auctions_catalog.json", e);
@@ -60,9 +60,9 @@ public class DatabaseInitializer {
 
         return auctionRepository.deleteAll()
                 .then(seedDatabase())
-                .doOnSuccess(v -> {
+                .doOnSuccess(_ -> {
                     log.info("🎉 Storefront fully stocked with 10,000 items!");
-                    isSeeding = false; // 👈 Mark as complete
+                    isSeeding = false;
                 });
     }
 
