@@ -42,9 +42,8 @@ function loadStorefront() {
                             }
                         }
                         auction.endsAtMs = isNaN(endMs) ? Date.now() + 86400000 : endMs;
+                        auction.userInvolved = false;
                     });
-
-                    auctions.sort((a, b) => a.endsAtMs - b.endsAtMs);
 
                     globalAllAuctions = auctions;
                     globalActiveCount = auctions.length;
@@ -62,54 +61,12 @@ function loadStorefront() {
                         };
                     });
 
-                    if (typeof renderPage === 'function') renderPage(1);
+                    updateSortIcons();
+                    sortAndRender();
+
                     if (typeof connectToGlobalStream === 'function') connectToGlobalStream();
-
                     if (typeof clockInterval !== 'undefined') clearInterval(clockInterval);
-                    clockInterval = setInterval(() => {
-                        const now = Date.now();
-
-                        if (globalAllAuctions && globalAllAuctions.length > 0) {
-                            const originalLength = globalAllAuctions.length;
-                            globalAllAuctions = globalAllAuctions.filter(a => (a.endsAtMs + 4000) > now);
-                            if (globalAllAuctions.length < originalLength && typeof renderPage === 'function') {
-                                renderPage(currentPage);
-                            }
-                        }
-
-                        globalActiveCount = globalAllAuctions.length;
-
-                        for (const id in activeAuctions) {
-                            const auction = activeAuctions[id];
-                            const timerEl = auction.timerEl || document.getElementById(`timer-${id}`);
-                            if (!timerEl) continue;
-
-                            if (!auction.timerEl) auction.timerEl = timerEl;
-
-                            const diff = auction.endsAt - now;
-                            if (diff <= 0) {
-                                timerEl.innerText = "Expired";
-                                timerEl.className = "text-gray-400 font-black text-lg";
-                                continue;
-                            }
-
-                            const hours = Math.floor(diff / (1000 * 60 * 60));
-                            const minutes = Math.floor((diff / 1000 / 60) % 60);
-                            const seconds = Math.floor((diff / 1000) % 60);
-
-                            let timeStr = "";
-                            if (hours > 0) timeStr += `${hours.toString().padStart(2, '0')}:`;
-                            timeStr += `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-                            if (diff < 15000) {
-                                timerEl.innerText = `⏳ ${timeStr}`;
-                                timerEl.className = "text-red-600 font-bold text-lg animate-pulse";
-                            } else {
-                                timerEl.innerText = timeStr;
-                                timerEl.className = "text-gray-700 font-bold text-lg";
-                            }
-                        }
-                    }, 1000);
+                    clockInterval = setInterval(tickTimers, 1000);
                 })
                 .catch(err => {
                     console.error("Failed to fetch auctions:", err);
@@ -203,9 +160,58 @@ function placeBid(auctionId) {
             if (activeAuctions[auctionId] && username === 'You') {
                 activeAuctions[auctionId].myMaxBid = amount;
             }
-            showCardToast(auctionId, "Accepted!", "bg-green-600");
+
+            const targetAuction = globalAllAuctions.find(a => a.id === auctionId);
+            if (targetAuction && !targetAuction.userInvolved) {
+                targetAuction.userInvolved = true;
+                sortAndRender();
+            }
+
+            showCardToast(auctionId, "ACCEPTED", "border-green-500 text-green-400");
         }
     }).catch(err => {
-        showCardToast(auctionId, "Network Error", "bg-red-600");
+        showCardToast(auctionId, errorMessage, "border-gray-500 text-gray-400");
     });
+}
+
+function tickTimers(skipRender = false) {
+    const now = Date.now();
+    if (globalAllAuctions && globalAllAuctions.length > 0) {
+        const originalLength = globalAllAuctions.length;
+        globalAllAuctions = globalAllAuctions.filter(a => (a.endsAtMs + 4000) > now);
+        if (globalAllAuctions.length < originalLength && !skipRender && typeof renderPage === 'function') {
+            renderPage(currentPage);
+        }
+    }
+    globalActiveCount = globalAllAuctions.length;
+
+    for (const id in activeAuctions) {
+        const auction = activeAuctions[id];
+        const timerEl = auction.timerEl || document.getElementById(`timer-${id}`);
+        if (!timerEl) continue;
+        if (!auction.timerEl) auction.timerEl = timerEl;
+
+        const diff = auction.endsAt - now;
+        if (diff <= 0) {
+            timerEl.innerText = "EXPIRED";
+            timerEl.className = "inline-block w-20 text-right text-gray-700";
+            continue;
+        }
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff / 1000 / 60) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+
+        let timeStr = "";
+        if (hours > 0) timeStr += `${hours.toString().padStart(2, '0')}:`;
+        timeStr += `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        if (diff < 15000) {
+            timerEl.innerText = timeStr;
+            timerEl.className = "inline-block w-20 text-right text-green-300 font-bold";
+        } else {
+            timerEl.innerText = timeStr;
+            timerEl.className = "inline-block w-20 text-right text-gray-500";
+        }
+    }
 }

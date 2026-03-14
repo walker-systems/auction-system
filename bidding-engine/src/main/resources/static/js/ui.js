@@ -1,34 +1,54 @@
 function createAuctionRow(auction, tbody) {
     const tr = document.createElement('tr');
     tr.id = `row-${auction.id}`;
-    tr.className = "hover:bg-gray-50 transition-colors duration-300";
+
+    tr.className = auction.userInvolved
+        ? "bg-green-900 bg-opacity-20 border-l-2 border-green-500 h-[60px] transition-colors duration-150"
+        : "terminal-row transition-colors duration-150 h-[60px]";
+
+    const watchingBadge = auction.userInvolved
+        ? `<span class="ml-2 text-[9px] bg-green-900 text-black px-1">WATCHING</span>`
+        : '';
+
+    const priceFormatted = auction.currentPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const idNum = auction.id.replace('auc-', '');
 
     tr.innerHTML = `
-        <td class="px-6 py-4 whitespace-nowrap">
-            <div class="font-bold text-gray-800 font-sans text-base">${auction.itemId}</div>
-            <div class="text-xs text-gray-500 mt-1">Leader: <span id="bidder-${auction.id}" class="font-semibold text-indigo-600 transition-all duration-300">${auction.highBidder || 'System'}</span></div>
+        <td class="px-4 py-2 whitespace-nowrap text-gray-600 text-xs">
+            ${idNum}
         </td>
-        <td class="px-6 py-4 whitespace-nowrap">
-            <div id="price-${auction.id}" class="text-2xl font-black text-green-600 transition-all duration-300">
-                $${auction.currentPrice.toFixed(2)}
+        <td class="px-4 py-2 whitespace-nowrap">
+            <div class="text-green-400 text-sm flex items-center">
+                ${auction.itemId}
+                ${watchingBadge}
             </div>
-            <div id="max-badge-${auction.id}" class="hidden mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-300"></div>
+            <div class="text-[10px] text-gray-600 mt-0.5">LDR: <span id="bidder-${auction.id}" class="text-gray-400">${auction.highBidder || 'SYS'}</span></div>
         </td>
-        <td class="px-6 py-4 whitespace-nowrap text-center">
-            <span id="bids-${auction.id}" class="inline-flex items-center justify-center px-3 py-1 text-sm font-bold leading-none text-blue-800 bg-blue-100 rounded-full">${auction.version || 0}</span>
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap text-right">
-            <span id="timer-${auction.id}" class="text-lg font-mono text-gray-700 font-bold transition-colors duration-300">Loading...</span>
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap text-center">
-            <div class="flex items-center justify-center space-x-2">
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-2 text-gray-500">$</span>
-                    <input type="number" id="bid-amount-${auction.id}" class="pl-6 pr-2 py-1 w-24 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500" value="${calculateNextBid(auction.currentPrice)}" step="0.01">
+        <td class="px-4 py-2 whitespace-nowrap">
+            <div class="flex flex-col justify-center">
+                <div id="price-${auction.id}" class="text-lg text-green-500 transition-colors duration-150">
+                    $${priceFormatted}
                 </div>
-                <input type="text" id="username-${auction.id}" class="py-1 px-2 w-24 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500" value="You">
-                <button id="btn-${auction.id}" onclick="placeBid('${auction.id}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded shadow-sm transition-all duration-150 transform hover:-translate-y-0.5 relative overflow-hidden">
-                    Bid
+                <div class="h-3 mt-0.5 text-left">
+                    <div id="max-badge-${auction.id}" class="hidden text-[9px] px-1 bg-gray-800 text-gray-300"></div>
+                </div>
+            </div>
+        </td>
+        <td class="px-4 py-2 whitespace-nowrap text-center">
+            <span id="bids-${auction.id}" class="text-xs text-gray-500">[${auction.version || 0}]</span>
+        </td>
+        <td class="px-4 py-2 whitespace-nowrap text-right">
+            <span id="timer-${auction.id}" class="inline-block w-20 text-right text-sm text-gray-500 transition-colors duration-150">--:--:--</span>
+        </td>
+        <td class="px-4 py-2 whitespace-nowrap text-center">
+            <div class="flex items-center justify-center space-x-1">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-1 text-gray-600 text-xs">$</span>
+                    <input type="number" id="bid-amount-${auction.id}" class="pl-4 pr-1 py-0.5 w-20 text-xs bg-black border border-gray-700 text-green-500 focus:outline-none focus:border-green-500" value="${calculateNextBid(auction.currentPrice)}" step="0.01">
+                </div>
+                <input type="text" id="username-${auction.id}" class="py-0.5 px-1 w-12 text-xs bg-black border border-gray-700 text-green-500 focus:outline-none focus:border-green-500 text-center" value="You">
+                <button id="btn-${auction.id}" onclick="placeBid('${auction.id}')" class="bg-[#050505] border border-gray-600 hover:border-green-500 hover:text-green-400 text-gray-500 text-xs py-0.5 px-2 transition-colors duration-150">
+                    EXE
                 </button>
             </div>
             <div id="toast-area-${auction.id}" class="relative h-0 flex justify-center"></div>
@@ -54,18 +74,17 @@ function showCardToast(auctionId, message, colorClass) {
         area.appendChild(toast);
     }
 
-    toast.className = `custom-toast ${colorClass} text-white px-3 py-1 text-xs rounded shadow-lg transform transition-all duration-300 scale-100 opacity-100 font-bold absolute`;
+    toast.className = `custom-toast bg-black border ${colorClass} px-2 py-0.5 text-[10px] transform transition-all duration-150 absolute z-50`;
     toast.innerText = message;
     void toast.offsetWidth;
 
     toastTimers[auctionId].fadeTimer = setTimeout(() => {
-        toast.classList.remove('scale-100', 'opacity-100');
-        toast.classList.add('scale-110', 'opacity-0');
+        toast.style.opacity = '0';
     }, 1500);
 
     toastTimers[auctionId].removeTimer = setTimeout(() => {
         if (toast && toast.parentNode) {
             toast.parentNode.removeChild(toast);
         }
-    }, 1800);
+    }, 1700);
 }

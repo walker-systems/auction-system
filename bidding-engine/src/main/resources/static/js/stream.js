@@ -34,19 +34,25 @@ function connectToGlobalStream() {
         const versionIncreased = updatedAuction.version > auctionState.version;
 
         if (priceIncreased || versionIncreased) {
-            rowElement.classList.remove('bg-green-100', 'bg-blue-100', 'transition-colors', 'duration-500');
+            rowElement.classList.add('bg-green-900', 'bg-opacity-20');
+            rowElement.classList.remove('terminal-row');
 
             if (priceIncreased) {
-                rowElement.classList.add('bg-green-100', 'transition-colors', 'duration-500');
-            } else if (versionIncreased) {
-                rowElement.classList.add('bg-blue-100', 'transition-colors', 'duration-500');
+                const formattedNewPrice = updatedAuction.currentPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                priceElement.innerText = `$${formattedNewPrice}`;
+                priceElement.classList.add('text-green-300');
+                priceElement.classList.remove('text-green-500');
             }
 
             setTimeout(() => {
-                rowElement.classList.remove('bg-green-100', 'bg-blue-100');
-            }, 300);
+                if (!auctionState.userInvolved) {
+                    rowElement.classList.remove('bg-green-900', 'bg-opacity-20');
+                    rowElement.classList.add('terminal-row');
+                }
+                priceElement.classList.remove('text-green-300');
+                priceElement.classList.add('text-green-500');
+            }, 150);
         }
-
         auctionState.endsAt = endMs;
         auctionState.highBidder = updatedAuction.highBidder || 'System';
         auctionState.version = updatedAuction.version || 0;
@@ -84,11 +90,11 @@ function connectToGlobalStream() {
         if (badgeElement && myMax) {
             badgeElement.classList.remove('hidden');
             if (updatedAuction.highBidder === currentUser && currentUser !== "") {
-                badgeElement.innerText = `Winning (Max: $${myMax.toFixed(2)})`;
-                badgeElement.className = "mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-300 inline-block";
+                badgeElement.innerText = `WIN (MAX: $${myMax.toFixed(2)})`;
+                badgeElement.className = "mt-1 text-[9px] px-1 bg-green-900 text-black rounded-sm inline-block";
             } else {
-                badgeElement.innerText = `Outbid! (Max: $${myMax.toFixed(2)})`;
-                badgeElement.className = "mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-300 inline-block";
+                badgeElement.innerText = `OUTBID (MAX: $${myMax.toFixed(2)})`;
+                badgeElement.className = "mt-1 text-[9px] px-1 bg-gray-800 text-gray-400 border border-gray-600 rounded-sm inline-block";
             }
         }
 
