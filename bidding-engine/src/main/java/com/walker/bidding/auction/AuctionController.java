@@ -1,5 +1,6 @@
 package com.walker.bidding.auction;
 
+import com.walker.bidding.config.DatabaseInitializer;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import java.util.Optional;
 public class AuctionController {
 
     private final AuctionService auctionService;
+    private final DatabaseInitializer databaseInitializer;
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleExceptions(Exception e) {
@@ -32,6 +34,9 @@ public class AuctionController {
     public Mono<Auction> placeBid(@PathVariable String id,
                                   @Valid @RequestBody BidRequest request,
                                   ServerHttpRequest httpRequest) {
+        if (databaseInitializer.isSeeding()) {
+            return Mono.error(new IllegalStateException("System is currently initializing. Please try again in a few seconds."));
+        }
 
         String ipAddress = Optional.ofNullable(httpRequest.getRemoteAddress())
                 .map(addr -> addr.getAddress().getHostAddress())

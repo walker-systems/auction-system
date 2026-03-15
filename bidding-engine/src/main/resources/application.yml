@@ -2,11 +2,10 @@ spring:
   application:
     name: bidding-engine
 
-  # 1. Redis Configuration
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
       timeout: 5000ms
       lettuce:
         pool:
@@ -14,7 +13,6 @@ spring:
           max-idle: 100
           min-idle: 10
 
-  # 2. AI / OpenAI Configuration
   ai:
     openai:
       api-key: ${OPENAI_API_KEY}
@@ -22,11 +20,9 @@ spring:
         options:
           model: gpt-3.5-turbo
 
-  # 3. WebFlux Config
   main:
     web-application-type: reactive
 
-# 4. Logging
 logging:
   level:
     root: INFO

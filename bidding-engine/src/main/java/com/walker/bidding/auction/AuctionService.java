@@ -98,7 +98,7 @@ public class AuctionService {
                                 });
                     })
                     .retryWhen(Retry.backoff(3, Duration.ofMillis(50)).filter(t -> t instanceof ConcurrentBidException))
-                    .doFinally(signal -> sample.stop(standardBidTimer));
+                    .doFinally(_ -> sample.stop(standardBidTimer));
         });
     }
 
@@ -117,20 +117,54 @@ public class AuctionService {
                             return Mono.error(new IllegalAccessException("User banned."));
                         }
 
-                        int bidCount = (reactionTimeMs < 100) ? 65 : 1;
-                        int isNewIp = (reactionTimeMs < 100) ? 1 : 0;
+                        return auctionRepository.findById(auctionId)
+                                .switchIfEmpty(Mono.error(new IllegalArgumentException("Auction not found.")))
+                                .flatMap(auction -> {
+                                    if (!auction.active()) return Mono.error(new IllegalStateException("Closed."));
 
-                        return auctionRepository.placeProxyBid(auctionId, bidderId, maxBid, ipAddress, userAgent, reactionTimeMs, bidCount, isNewIp)
-                                .flatMap(updatedAuction -> {
-                                    log.info("📈 Proxy bid evaluated. Winner: {}, Visible Price: ${}",
-                                            updatedAuction.highBidder(), updatedAuction.currentPrice());
+                                    BigDecimal minimumWinningBid = BidIncrementCalculator.getMinimumNextBid(auction.currentPrice());
 
-                                    return auctionRepository.publishUpdate(updatedAuction)
-                                            .doOnSuccess(v -> globalFirehose.tryEmitNext(updatedAuction))
-                                            .thenReturn(updatedAuction);
+                                    BigDecimal newVisiblePrice;
+                                    if (maxBid.compareTo(minimumWinningBid) >= 0) {
+                                        newVisiblePrice = minimumWinningBid;
+                                    } else {
+                                        return Mono.error(new IllegalArgumentException("Bid must be at least $" + minimumWinningBid));
+                                    }
+
+                                    int bidCount = (reactionTimeMs < 100) ? 65 : 1;
+                                    int isNewIp = (reactionTimeMs < 100) ? 1 : 0;
+
+                                    Auction updatedAuction = new Auction(
+                                            auction.id(),
+                                            auction.itemId(),
+                                            newVisiblePrice,
+                                            bidderId,
+                                            auction.endsAt(),
+                                            true,
+                                            auction.version() + 1,
+                                            ipAddress,
+                                            userAgent,
+                                            reactionTimeMs,
+                                            bidCount,
+                                            isNewIp
+                                    );
+
+                                    return auctionRepository.updateWithVersion(updatedAuction)
+                                            .flatMap(bidSuccess -> {
+                                                if (bidSuccess) {
+                                                    log.info("📈 Proxy bid evaluated. Winner: {}, Visible Price: ${}",
+                                                            updatedAuction.highBidder(), updatedAuction.currentPrice());
+                                                    return auctionRepository.publishUpdate(updatedAuction)
+                                                            .doOnSuccess(v -> globalFirehose.tryEmitNext(updatedAuction))
+                                                            .thenReturn(updatedAuction);
+                                                } else {
+                                                    return Mono.error(new ConcurrentBidException("Collision"));
+                                                }
+                                            });
                                 });
                     })
-                    .doFinally(signal -> sample.stop(proxyBidTimer));
+                    .retryWhen(Retry.backoff(3, Duration.ofMillis(50)).filter(t -> t instanceof ConcurrentBidException))
+                    .doFinally(_ -> sample.stop(proxyBidTimer));
         });
     }
 

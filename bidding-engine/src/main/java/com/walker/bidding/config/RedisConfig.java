@@ -2,9 +2,8 @@ package com.walker.bidding.config;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.walker.bidding.auction.Auction;
-import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
@@ -17,19 +16,16 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import java.io.IOException;
 
 @Configuration
-@NullMarked
 public class RedisConfig {
 
     @Bean
-    public ReactiveRedisTemplate<String, Auction> auctionRedisTemplate(ReactiveRedisConnectionFactory factory) {
+    public RedisSerializer<Auction> auctionSerializer() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
 
-        ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
-
-        StringRedisSerializer keySerializer = new StringRedisSerializer();
-
-        RedisSerializer<Auction> valueSerializer = new RedisSerializer<>() {
+        return new RedisSerializer<>() {
             @Override
-            public byte[] serialize(@Nullable Auction auction) throws SerializationException {
+            public byte[] serialize(Auction auction) throws SerializationException {
                 if (auction == null) return new byte[0];
                 try {
                     return objectMapper.writeValueAsBytes(auction);
@@ -39,7 +35,7 @@ public class RedisConfig {
             }
 
             @Override
-            public @Nullable Auction deserialize(byte @Nullable [] bytes) throws SerializationException {
+            public Auction deserialize(byte[] bytes) throws SerializationException {
                 if (bytes == null || bytes.length == 0) return null;
                 try {
                     return objectMapper.readValue(bytes, Auction.class);
@@ -48,10 +44,16 @@ public class RedisConfig {
                 }
             }
         };
+    }
+
+    @Bean
+    public ReactiveRedisTemplate<String, Auction> auctionRedisTemplate(
+            ReactiveRedisConnectionFactory factory,
+            RedisSerializer<Auction> auctionSerializer) {
 
         RedisSerializationContext<String, Auction> context = RedisSerializationContext
-                .<String, Auction>newSerializationContext(keySerializer)
-                .value(valueSerializer)
+                .<String, Auction>newSerializationContext(new StringRedisSerializer())
+                .value(auctionSerializer)
                 .build();
 
         return new ReactiveRedisTemplate<>(factory, context);

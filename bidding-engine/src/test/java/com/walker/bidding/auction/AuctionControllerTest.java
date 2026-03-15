@@ -1,5 +1,6 @@
 package com.walker.bidding.auction;
 
+import com.walker.bidding.config.DatabaseInitializer;
 import com.walker.bidding.exception.ConcurrentBidException;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -15,6 +16,7 @@ import java.time.Instant;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
 @WebFluxTest(AuctionController.class)
 class AuctionControllerTest {
@@ -23,6 +25,8 @@ class AuctionControllerTest {
     private WebTestClient webTestClient;
     @MockitoBean
     private AuctionService auctionService;
+    @MockitoBean
+    private DatabaseInitializer databaseInitializer; // 👈 2. ADD THIS LINE
 
     @Test
     void placeBid_whenValid_shouldReturn200Ok() {
@@ -39,7 +43,7 @@ class AuctionControllerTest {
                 "127.0.0.1", "test-agent", 150, 1, 0
         );
 
-        Mockito.when(auctionService.placeBid(eq(auctionId), eq("webUser"), eq(bidAmount), any(), any(), eq(150)))
+        when(auctionService.placeBid(eq(auctionId), eq("webUser"), eq(bidAmount), any(), any(), eq(150)))
                 .thenReturn(Mono.just(updatedAuction));
 
         webTestClient.post()
@@ -64,7 +68,7 @@ class AuctionControllerTest {
         String auctionId = "test-1";
         BigDecimal bidAmount = new BigDecimal("150.00");
 
-        Mockito.when(auctionService.placeBid(eq(auctionId), eq("unluckyUser"), eq(bidAmount), any(), any(), eq(120)))
+        when(auctionService.placeBid(eq(auctionId), eq("unluckyUser"), eq(bidAmount), any(), any(), eq(120)))
                 .thenReturn(Mono.error(new ConcurrentBidException("Bid collision")));
 
         webTestClient.post()
@@ -78,7 +82,21 @@ class AuctionControllerTest {
                         }
                         """)
                 .exchange()
-                // 👇 THE FIX: We now gracefully handle these errors with a 400 response for the UI!
                 .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void placeBid_RejectsRequest_WhenDatabaseIsSeeding() {
+        when(databaseInitializer.isSeeding()).thenReturn(true);
+
+        BidRequest request = new BidRequest("user-1", new BigDecimal("15.00"), 120);
+
+        webTestClient.post()
+                .uri("/api/auctions/auc-1/bids")
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").isEqualTo("System is currently initializing. Please try again in a few seconds.");
     }
 }
