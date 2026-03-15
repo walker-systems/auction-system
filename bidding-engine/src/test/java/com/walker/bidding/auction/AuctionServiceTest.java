@@ -64,7 +64,7 @@ class AuctionServiceTest {
         );
 
         Mockito.when(auctionRepository.findById(auctionId)).thenReturn(Mono.just(auction));
-        Mockito.when(auctionRepository.updateWithVersion(any(Auction.class))).thenReturn(Mono.just(true));
+        Mockito.when(auctionRepository.updateAuction(any(Auction.class))).thenReturn(Mono.just(true));
 
         Mono<Auction> validBidMono = auctionService.placeBid(
                 auctionId, "testUserB", new BigDecimal("115.00"),
@@ -124,7 +124,7 @@ class AuctionServiceTest {
                         return Mono.just(stateB);
                     }
                 }));
-        Mockito.when(auctionRepository.updateWithVersion(any(Auction.class)))
+        Mockito.when(auctionRepository.updateAuction(any(Auction.class)))
                 .thenReturn(Mono.just(false))
                 .thenReturn(Mono.just(true));
 

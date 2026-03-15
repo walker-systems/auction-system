@@ -41,18 +41,10 @@ class AuctionServiceIntegrationTest {
         String testItemName = "test-item-1";
 
         Auction newAuction = new Auction(
-                testAuctionId,
-                testItemName,
-                new BigDecimal("10.00"),
-                "System",
-                Instant.now().plus(Duration.ofSeconds(100)),
-                true,
-                0,
-                null,
-                null,
-                0,
-                0,
-                0
+                testAuctionId, testItemName, new BigDecimal("10.00"),
+                "System", Instant.now().plus(Duration.ofSeconds(100)),
+                true, 0, null, null,
+                0, 0, 0
         );
 
         Mono<Auction> bidProcess = auctionRepository.save(newAuction)
@@ -72,22 +64,14 @@ class AuctionServiceIntegrationTest {
     void testSoftClose_extendsAuctionEndTime_whenBidPlacedNearEnd() {
         String testAuctionId = "test-auc-softclose";
 
-        // 👇 THE FIX: Set the timer to 4 seconds so it lands inside the 5-second Danger Zone!
         Instant originalEndTime = Instant.now().plus(Duration.ofSeconds(4));
 
         Auction newAuction = new Auction(
-                testAuctionId,
-                "Sniper Bait",
+                testAuctionId, "Sniper Bait",
                 new BigDecimal("10.00"),
-                "System",
-                originalEndTime,
-                true,
-                0,
-                null,
-                null,
-                0,
-                0,
-                0
+                "System", originalEndTime,
+                true, 0, null, null,
+                0, 0, 0
         );
 
         Mono<Auction> bidProcess = auctionRepository.save(newAuction)

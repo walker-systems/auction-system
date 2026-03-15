@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -122,10 +123,11 @@ public class AuctionRepository {
 
     private Mono<Long> updateActiveAuctionIndex(Auction auction) {
 
-        // Adds auction to active auctions index if it's currently active. Otherwise, it is removed.
+        // Add to active auctions index if it's currently active...
         if (auction.active()) {
             return stringTemplate.opsForSet().add(KEY_ACTIVE_AUCTIONS, auction.id());
         }
+        // ...otherwise, remove it from active auctions index.
         return stringTemplate.opsForSet().remove(KEY_ACTIVE_AUCTIONS, auction.id());
     }
 
@@ -150,5 +152,11 @@ public class AuctionRepository {
                 return Mono.error(new RuntimeException("Failed to deserialize rollback result", e));
             }
         });
+    }
+
+    public Flux<Auction> observeAllAuctionUpdates() {
+        // Listens to "auction:updates:*"
+        return auctionTemplate.listenTo(PatternTopic.of(CHANNEL_PREFIX_UPDATES + "*"))
+                .map(Message::getMessage);
     }
 }

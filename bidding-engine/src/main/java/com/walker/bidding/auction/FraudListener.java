@@ -29,7 +29,7 @@ public class FraudListener {
 
                     log.warn("🚨 AI SENTINEL ALERT: Bot '{}' has been banned! Reverting price on {}...", username, auctionId);
 
-                    return auctionService.revertFraudulentBid(auctionId, username)
+                    return auctionService.revertBid(auctionId, username)
                             .doOnSuccess(_ -> log.info("✅ Revert successfully committed for {}...", auctionId))
                             .doOnError(err -> log.error("Failed to revert bid: ", err))
                             .onErrorResume(_ -> Mono.empty());
