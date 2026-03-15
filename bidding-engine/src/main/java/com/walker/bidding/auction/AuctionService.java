@@ -84,7 +84,7 @@ public class AuctionService {
                                             (reactionTimeMs < 100) ? 65 : 1, (reactionTimeMs < 100) ? 1 : 0
                                     );
 
-                                    return auctionRepository.updateWithVersion(updatedAuction)
+                                    return auctionRepository.updateAuction(updatedAuction)
                                             .flatMap(bidSuccess -> {
                                                 if (bidSuccess) {
                                                     log.info("✅ Bid placed by {} for ${}", bidder, bidAmount);
@@ -149,7 +149,7 @@ public class AuctionService {
                                             isNewIp
                                     );
 
-                                    return auctionRepository.updateWithVersion(updatedAuction)
+                                    return auctionRepository.updateAuction(updatedAuction)
                                             .flatMap(bidSuccess -> {
                                                 if (bidSuccess) {
                                                     log.info("📈 Proxy bid evaluated. Winner: {}, Visible Price: ${}",
@@ -182,7 +182,7 @@ public class AuctionService {
     }
 
     public Mono<Void> revertFraudulentBid(String auctionId, String fraudUser) {
-        return auctionRepository.revertFraudulentBid(auctionId, fraudUser, new BigDecimal("10.00"))
+        return auctionRepository.revertBid(auctionId, fraudUser, new BigDecimal("10.00"))
                 .flatMap(reverted -> auctionRepository.publishUpdate(reverted)
                         .doOnSuccess(v -> globalFirehose.tryEmitNext(reverted)))
                 .then();
@@ -194,7 +194,10 @@ public class AuctionService {
                 .filter(Auction::active)
                 .filter(a -> a.endsAt().isBefore(Instant.now()))
                 .flatMap(auction -> {
-                    Auction closedAuction = new Auction(auction.id(), auction.itemId(), auction.currentPrice(), auction.highBidder(), auction.endsAt(), false, auction.version() + 1, auction.ipAddress(), auction.userAgent(), auction.reactionTimeMs(), auction.bidCountLastMin(), auction.isNewIp());
+                    Auction closedAuction = new Auction(auction.id(), auction.itemId(), auction.currentPrice(),
+                            auction.highBidder(), auction.endsAt(), false,
+                            auction.version() + 1, auction.ipAddress(), auction.userAgent(),
+                            auction.reactionTimeMs(), auction.bidCountLastMin(), auction.isNewIp());
                     return auctionRepository.save(closedAuction)
                             .then(auctionRepository.publishUpdate(closedAuction))
                             .doOnSuccess(v -> globalFirehose.tryEmitNext(closedAuction));
