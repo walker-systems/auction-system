@@ -1,8 +1,10 @@
 package com.walker.bidding.auction;
 
+import com.walker.bidding.exception.BannedUserException;
 import com.walker.bidding.exception.ConcurrentBidException;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.distribution.ValueAtPercentile;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +13,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
 import reactor.util.retry.Retry;
 
 import java.math.BigDecimal;
@@ -27,8 +28,6 @@ public class AuctionService {
     private final AuctionRepository auctionRepository;
     private final ReactiveRedisTemplate<String, String> redisTemplate;
     private final MeterRegistry meterRegistry;
-
-    private final Sinks.Many<Auction> globalFirehose = Sinks.many().multicast().directBestEffort();
 
     private Timer proxyBidTimer;
     private Timer standardBidTimer;
@@ -48,8 +47,8 @@ public class AuctionService {
 
     public double getP99LatencyMs() {
         if (proxyBidTimer == null) return 0.0;
-        var percentiles = proxyBidTimer.takeSnapshot().percentileValues();
-        for (var p : percentiles) {
+        ValueAtPercentile[] percentiles = proxyBidTimer.takeSnapshot().percentileValues();
+        for (ValueAtPercentile p : percentiles) {
             if (p.percentile() == 0.99) {
                 return p.value(TimeUnit.MILLISECONDS);
             }
@@ -66,7 +65,7 @@ public class AuctionService {
             return redisTemplate.opsForSet().isMember("banned_users", bidder)
                     .flatMap(isBanned -> {
                         if (isBanned) {
-                            return Mono.error(new IllegalAccessException("User is banned."));
+                            return Mono.error(new BannedUserException("User is banned."));
                         }
 
                         return auctionRepository.findById(auctionId)
@@ -79,17 +78,16 @@ public class AuctionService {
 
                                     Auction updatedAuction = new Auction(
                                             auction.id(), auction.itemId(), bidAmount, bidder,
-                                            auction.endsAt(), true, auction.version() + 1,
+                                            auction.endsAt(), true, auction.version() + 1, // critical version increment
                                             ipAddress, userAgent, reactionTimeMs,
                                             (reactionTimeMs < 100) ? 65 : 1, (reactionTimeMs < 100) ? 1 : 0
                                     );
 
-                                    return auctionRepository.updateWithVersion(updatedAuction)
+                                    return auctionRepository.updateAuction(updatedAuction)
                                             .flatMap(bidSuccess -> {
                                                 if (bidSuccess) {
                                                     log.info("✅ Bid placed by {} for ${}", bidder, bidAmount);
                                                     return auctionRepository.publishUpdate(updatedAuction)
-                                                            .doOnSuccess(v -> globalFirehose.tryEmitNext(updatedAuction))
                                                             .thenReturn(updatedAuction);
                                                 } else {
                                                     return Mono.error(new ConcurrentBidException("Collision"));
@@ -113,7 +111,6 @@ public class AuctionService {
             return redisTemplate.opsForSet().isMember("banned_users", bidderId)
                     .flatMap(isBanned -> {
                         if (isBanned) {
-                            log.error("🚫 Access Denied: Banned user '{}' attempted proxy bid on {}", bidderId, auctionId);
                             return Mono.error(new IllegalAccessException("User banned."));
                         }
 
@@ -123,43 +120,71 @@ public class AuctionService {
                                     if (!auction.active()) return Mono.error(new IllegalStateException("Closed."));
 
                                     BigDecimal minimumWinningBid = BidIncrementCalculator.getMinimumNextBid(auction.currentPrice());
-
-                                    BigDecimal newVisiblePrice;
-                                    if (maxBid.compareTo(minimumWinningBid) >= 0) {
-                                        newVisiblePrice = minimumWinningBid;
-                                    } else {
+                                    if (!bidderId.equals(auction.highBidder()) && maxBid.compareTo(minimumWinningBid) < 0) {
                                         return Mono.error(new IllegalArgumentException("Bid must be at least $" + minimumWinningBid));
                                     }
 
-                                    int bidCount = (reactionTimeMs < 100) ? 65 : 1;
-                                    int isNewIp = (reactionTimeMs < 100) ? 1 : 0;
+                                    String maxBidsKey = "auctions:" + auctionId + ":max_bids";
 
-                                    Auction updatedAuction = new Auction(
-                                            auction.id(),
-                                            auction.itemId(),
-                                            newVisiblePrice,
-                                            bidderId,
-                                            auction.endsAt(),
-                                            true,
-                                            auction.version() + 1,
-                                            ipAddress,
-                                            userAgent,
-                                            reactionTimeMs,
-                                            bidCount,
-                                            isNewIp
-                                    );
-
-                                    return auctionRepository.updateWithVersion(updatedAuction)
-                                            .flatMap(bidSuccess -> {
-                                                if (bidSuccess) {
-                                                    log.info("📈 Proxy bid evaluated. Winner: {}, Visible Price: ${}",
-                                                            updatedAuction.highBidder(), updatedAuction.currentPrice());
-                                                    return auctionRepository.publishUpdate(updatedAuction)
-                                                            .doOnSuccess(v -> globalFirehose.tryEmitNext(updatedAuction))
-                                                            .thenReturn(updatedAuction);
-                                                } else {
-                                                    return Mono.error(new ConcurrentBidException("Collision"));
+                                    return redisTemplate.opsForZSet().score(maxBidsKey, bidderId)
+                                            .defaultIfEmpty(0.0)
+                                            .flatMap(existingMax -> {
+                                                if (maxBid.compareTo(BigDecimal.valueOf(existingMax)) <= 0) {
+                                                    return Mono.error(new IllegalArgumentException("Max bid must be higher than your current max bid"));
                                                 }
+
+                                                return redisTemplate.opsForZSet().add(maxBidsKey, bidderId, maxBid.doubleValue())
+                                                        .thenMany(redisTemplate.opsForZSet().reverseRangeWithScores(maxBidsKey, org.springframework.data.domain.Range.closed(0L, 1L)))
+                                                        .collectList()
+                                                        .flatMap(top2 -> {
+                                                            String highestBidder = top2.getFirst().getValue();
+                                                            Double score0 = top2.getFirst().getScore();
+                                                            BigDecimal highestMax = BigDecimal.valueOf(score0 != null ? score0 : 0.0);
+
+                                                            BigDecimal newVisiblePrice = auction.currentPrice();
+
+                                                            if (top2.size() > 1) {
+                                                                Double score1 = top2.get(1).getScore();
+                                                                BigDecimal secondMax = BigDecimal.valueOf(score1 != null ? score1 : 0.0);
+                                                                BigDecimal increment = BidIncrementCalculator.getIncrement(secondMax);
+                                                                BigDecimal incrementedSecond = secondMax.add(increment);
+
+                                                                if (incrementedSecond.compareTo(highestMax) > 0) {
+                                                                    newVisiblePrice = highestMax;
+                                                                } else {
+                                                                    newVisiblePrice = incrementedSecond;
+                                                                }
+                                                            }
+                                                            Instant newEndsAt = auction.endsAt();
+                                                            if (newEndsAt != null) {
+                                                                long timeLeftSec = Duration.between(Instant.now(), newEndsAt).getSeconds();
+                                                                if (timeLeftSec > 0 && timeLeftSec <= 5) {
+                                                                    newEndsAt = Instant.now().plusSeconds(30);
+                                                                    log.info("⏱️ SOFT CLOSE: Auction {} extended by 30 seconds!", auctionId);
+                                                                }
+                                                            }
+
+                                                            int bidCount = (reactionTimeMs < 100) ? 65 : 1;
+                                                            int isNewIp = (reactionTimeMs < 100) ? 1 : 0;
+
+                                                            Auction updatedAuction = new Auction(
+                                                                    auction.id(), auction.itemId(), newVisiblePrice, highestBidder,
+                                                                    newEndsAt, true, auction.version() + 1,
+                                                                    ipAddress, userAgent, reactionTimeMs, bidCount, isNewIp
+                                                            );
+
+                                                            return auctionRepository.updateAuction(updatedAuction)
+                                                                    .flatMap(bidSuccess -> {
+                                                                        if (bidSuccess) {
+                                                                            log.info("📈 Proxy bid evaluated. Winner: {}, Visible Price: ${}",
+                                                                                    updatedAuction.highBidder(), updatedAuction.currentPrice());
+                                                                            return auctionRepository.publishUpdate(updatedAuction)
+                                                                                    .thenReturn(updatedAuction);
+                                                                        } else {
+                                                                            return Mono.error(new ConcurrentBidException("Collision"));
+                                                                        }
+                                                                    });
+                                                        });
                                             });
                                 });
                     })
@@ -167,24 +192,22 @@ public class AuctionService {
                     .doFinally(_ -> sample.stop(proxyBidTimer));
         });
     }
-
     public Flux<Auction> streamAuctionUpdates(String auctionId) {
         return auctionRepository.observeAuctionUpdates(auctionId).sample(Duration.ofMillis(100));
     }
 
     public Flux<Auction> streamAllAuctionUpdates() {
-        log.info("🔌 Client connected to the global firehose...");
-        return globalFirehose.asFlux();
+        log.info("🔌 Client connected to the Redis global firehose...");
+        return auctionRepository.observeAllAuctionUpdates();
     }
 
     public Flux<Auction> getAllAuctions() {
         return auctionRepository.findAll();
     }
 
-    public Mono<Void> revertFraudulentBid(String auctionId, String fraudUser) {
-        return auctionRepository.revertFraudulentBid(auctionId, fraudUser, new BigDecimal("10.00"))
-                .flatMap(reverted -> auctionRepository.publishUpdate(reverted)
-                        .doOnSuccess(v -> globalFirehose.tryEmitNext(reverted)))
+    public Mono<Void> revertBid(String auctionId, String fraudUser) {
+        return auctionRepository.revertBid(auctionId, fraudUser, new BigDecimal("10.00"))
+                .flatMap(auctionRepository::publishUpdate)
                 .then();
     }
 
@@ -194,10 +217,12 @@ public class AuctionService {
                 .filter(Auction::active)
                 .filter(a -> a.endsAt().isBefore(Instant.now()))
                 .flatMap(auction -> {
-                    Auction closedAuction = new Auction(auction.id(), auction.itemId(), auction.currentPrice(), auction.highBidder(), auction.endsAt(), false, auction.version() + 1, auction.ipAddress(), auction.userAgent(), auction.reactionTimeMs(), auction.bidCountLastMin(), auction.isNewIp());
+                    Auction closedAuction = new Auction(auction.id(), auction.itemId(), auction.currentPrice(),
+                            auction.highBidder(), auction.endsAt(), false,
+                            auction.version() + 1, auction.ipAddress(), auction.userAgent(),
+                            auction.reactionTimeMs(), auction.bidCountLastMin(), auction.isNewIp());
                     return auctionRepository.save(closedAuction)
-                            .then(auctionRepository.publishUpdate(closedAuction))
-                            .doOnSuccess(v -> globalFirehose.tryEmitNext(closedAuction));
+                            .then(auctionRepository.publishUpdate(closedAuction));
                 }).subscribe();
     }
 }

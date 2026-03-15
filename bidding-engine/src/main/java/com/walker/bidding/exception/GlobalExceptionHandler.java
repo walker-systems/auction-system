@@ -13,6 +13,17 @@ import org.springframework.web.server.ResponseStatusException;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(ConcurrentBidException.class)
+    public ProblemDetail handleConcurrentModification() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "High traffic. Please try again.");
+    }
+
+    @ExceptionHandler(BannedUserException.class)
+    public ProblemDetail handleBannedUser(BannedUserException ex) {
+        log.warn("Security Event: Blocked request from banned user. Reason: {}", ex.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
@@ -21,11 +32,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ProblemDetail handleIllegalState(IllegalStateException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-    }
-
-    @ExceptionHandler(ConcurrentBidException.class)
-    public ProblemDetail handleConcurrentModification(ConcurrentBidException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "High traffic. Please try again.");
     }
 
     @ExceptionHandler(SerializationException.class)

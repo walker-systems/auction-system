@@ -56,7 +56,7 @@ public class AuctionRepositoryTest {
                 null, null, 0, 0, 0
         );
 
-        StepVerifier.create(auctionRepository.updateWithVersion(proposedAuction))
+        StepVerifier.create(auctionRepository.updateAuction(proposedAuction))
                 .expectNext(true)
                 .verifyComplete();
     }
@@ -77,7 +77,7 @@ public class AuctionRepositoryTest {
                 null, null, 0, 0, 0
         );
 
-        StepVerifier.create(auctionRepository.updateWithVersion(proposedAuction))
+        StepVerifier.create(auctionRepository.updateAuction(proposedAuction))
                 .expectNext(false)
                 .verifyComplete();
     }

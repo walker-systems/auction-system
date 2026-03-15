@@ -3,9 +3,9 @@ package com.walker.bidding.auction;
 import com.walker.bidding.config.DatabaseInitializer;
 import com.walker.bidding.exception.ConcurrentBidException;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -26,20 +26,15 @@ class AuctionControllerTest {
     @MockitoBean
     private AuctionService auctionService;
     @MockitoBean
-    private DatabaseInitializer databaseInitializer; // 👈 2. ADD THIS LINE
+    private DatabaseInitializer databaseInitializer;
 
     @Test
     void placeBid_whenValid_shouldReturn200Ok() {
         String auctionId = "test-1";
         BigDecimal bidAmount = new BigDecimal("150.00");
         Auction updatedAuction = new Auction(
-                auctionId,
-                "item-1",
-                bidAmount,
-                "webUser",
-                Instant.now().plusSeconds(3600),
-                true,
-                2,
+                auctionId, "item-1", bidAmount, "webUser",
+                Instant.now().plusSeconds(3600), true, 2,
                 "127.0.0.1", "test-agent", 150, 1, 0
         );
 
@@ -64,7 +59,7 @@ class AuctionControllerTest {
     }
 
     @Test
-    void placeBid_whenCollisionOccurs_shouldReturn400BadRequest() {
+    void placeBid_whenCollisionOccurs_shouldReturn409Conflict() {
         String auctionId = "test-1";
         BigDecimal bidAmount = new BigDecimal("150.00");
 
@@ -82,7 +77,7 @@ class AuctionControllerTest {
                         }
                         """)
                 .exchange()
-                .expectStatus().isBadRequest();
+                .expectStatus().isEqualTo(HttpStatus.CONFLICT);
     }
 
     @Test
@@ -97,6 +92,7 @@ class AuctionControllerTest {
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody()
-                .jsonPath("$.message").isEqualTo("System is currently initializing. Please try again in a few seconds.");
+                // 👇 FIX: ProblemDetail stores the message in "detail", not "message"
+                .jsonPath("$.detail").isEqualTo("System is currently initializing. Please try again in a few seconds.");
     }
 }

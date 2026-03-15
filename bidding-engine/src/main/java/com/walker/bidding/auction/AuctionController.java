@@ -6,13 +6,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity; // 👈 NEW
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Map; // 👈 NEW
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -23,12 +23,6 @@ public class AuctionController {
 
     private final AuctionService auctionService;
     private final DatabaseInitializer databaseInitializer;
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleExceptions(Exception e) {
-        String cleanMessage = e.getMessage() != null ? e.getMessage().replace("ERR ", "") : "Bid rejected by proxy engine";
-        return ResponseEntity.badRequest().body(Map.of("message", cleanMessage));
-    }
 
     @PostMapping("/{id}/bids")
     public Mono<Auction> placeBid(@PathVariable String id,
