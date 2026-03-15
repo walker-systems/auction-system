@@ -1,0 +1,797 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Real-Time Bidding & Fraud Detection Platform">
+      
+      
+        <meta name="author" content="Justin Walker">
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+    
+    
+      
+        <title>Sprint 3 — Plan (Auction System) - Justin Walker | Portfolio</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#sprint-3-plan-auction-system" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Justin Walker | Portfolio" class="md-header__button md-logo" aria-label="Justin Walker | Portfolio" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Justin Walker | Portfolio
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Sprint 3 — Plan (Auction System)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../ADR/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Decisions
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../engine/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Component: Bidding Engine
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../sentinel/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Component: Sentinel Service
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Justin Walker | Portfolio" class="md-nav__button md-logo" aria-label="Justin Walker | Portfolio" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Justin Walker | Portfolio
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../engine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component: Bidding Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sentinel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component: Sentinel Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#goal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#working-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-order-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution order (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tickets-definitions-of-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tickets (definitions of done)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tickets (definitions of done)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-101-active-auction-index-p0-est-10h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DATA-101 — Active Auction Index (P0) — Est 1.0h
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rt-201-per-auction-pubsub-p0-est-05h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RT-201 — Per-auction Pub/Sub (P0) — Est 0.5h
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rt-202-sse-stream-endpoint-p0-est-10h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RT-202 — SSE Stream Endpoint (P0) — Est 1.0h
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rt-203-sse-coalescing-p1-est-05h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RT-203 — SSE Coalescing (P1) — Est 0.5h
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pb-302-increment-table-p1-est-05h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PB-302 — Increment Table (P1) — Est 0.5h
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pb-301-max-bid-endpoint-p1-est-10h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PB-301 — Max Bid Endpoint (P1) — Est 1.0h
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pb-303-atomic-proxy-bidding-lua-engine-p1-est-40h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PB-303 — Atomic Proxy Bidding Lua Engine (P1) — Est 4.0h
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pb-304-deterministic-rollback-via-zset-recompute-p1-est-10h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PB-304 — Deterministic Rollback via ZSET recompute (P1) — Est 1.0h
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#obs-401402403-observability-p1-est-25h-total" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OBS-401/402/403 — Observability (P1) — Est 2.5h total
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#qa-501502-testing-evidence-p0p1-est-35h-total" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        QA-501/502 — Testing &amp; Evidence (P0/P1) — Est 3.5h total
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#doc-601602-docs-refresh-p0-est-25h-total" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DOC-601/602 — Docs refresh (P0) — Est 2.5h total
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-locations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence locations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="sprint-3-plan-auction-system">Sprint 3 — Plan (Auction System)</h1>
+<h2 id="goal">Goal</h2>
+<p>Ship a production-minded proxy bidding engine with deterministic rollback, real-time SSE updates, and evidence (tests + metrics + docs).</p>
+<h2 id="working-rules">Working rules</h2>
+<ul>
+<li>One ticket per branch: sprint3/<TICKET-ID>-<slug></li>
+<li>Squash merge each ticket into main (via PR)</li>
+<li>Keep diffs minimal; avoid refactors</li>
+</ul>
+<h2 id="execution-order-recommended">Execution order (recommended)</h2>
+<p>1) DATA-101 Active Auction Index (Replace KEYS scan)
+2) RT-201 Per-Auction Pub/Sub Channels
+3) RT-202 SSE Stream Endpoint
+4) RT-203 SSE Coalescing (~100ms)
+5) PB-302 Bid Increment Table
+6) PB-301 Max Bid Endpoint
+7) PB-303 Lua Proxy Bid Engine (HASH + ZSET, atomic)
+8) PB-304 Fraud Rollback via ZSET recompute
+9) OBS-401 Actuator + Micrometer
+10) OBS-402 Custom Counters
+11) OBS-403 Live Stats (logs or /stats)
+12) QA-501 TESTING.md + docs/evidence/
+13) QA-502 Integration Tests (proxy bidding + rollback + SSE smoke)
+14) DOC-602 ARCHITECTURE + DESIGN_DECISIONS refresh
+15) DOC-601 README refresh</p>
+<h2 id="tickets-definitions-of-done">Tickets (definitions of done)</h2>
+<h3 id="data-101-active-auction-index-p0-est-10h">DATA-101 — Active Auction Index (P0) — Est 1.0h</h3>
+<ul>
+<li>Remove Redis KEYS usage for listing auctions</li>
+<li>Maintain SET active_auctions</li>
+<li>findAll uses SMEMBERS + fetch per id</li>
+</ul>
+<h3 id="rt-201-per-auction-pubsub-p0-est-05h">RT-201 — Per-auction Pub/Sub (P0) — Est 0.5h</h3>
+<ul>
+<li>Replace global channel with auction:updates:<auctionId></li>
+<li>Ensure publish + subscribe both updated</li>
+</ul>
+<h3 id="rt-202-sse-stream-endpoint-p0-est-10h">RT-202 — SSE Stream Endpoint (P0) — Est 1.0h</h3>
+<ul>
+<li>Add endpoint /api/auctions/{id}/stream producing SSE</li>
+<li>Streams updates for that auction id</li>
+</ul>
+<h3 id="rt-203-sse-coalescing-p1-est-05h">RT-203 — SSE Coalescing (P1) — Est 0.5h</h3>
+<ul>
+<li>Coalesce stream (e.g., sample latest every ~100ms)</li>
+</ul>
+<h3 id="pb-302-increment-table-p1-est-05h">PB-302 — Increment Table (P1) — Est 0.5h</h3>
+<ul>
+<li>Implement tiered increment function</li>
+</ul>
+<h3 id="pb-301-max-bid-endpoint-p1-est-10h">PB-301 — Max Bid Endpoint (P1) — Est 1.0h</h3>
+<ul>
+<li>POST /api/auctions/{id}/max-bids</li>
+<li>Validates request and calls Lua engine</li>
+</ul>
+<h3 id="pb-303-atomic-proxy-bidding-lua-engine-p1-est-40h">PB-303 — Atomic Proxy Bidding Lua Engine (P1) — Est 4.0h</h3>
+<ul>
+<li>Uses HASH state + ZSET max bids</li>
+<li>Enforces increase-only replaceable max bids</li>
+<li>Computes top2, visible price, updates state, increments version</li>
+<li>Returns updated state for response + publish update</li>
+</ul>
+<h3 id="pb-304-deterministic-rollback-via-zset-recompute-p1-est-10h">PB-304 — Deterministic Rollback via ZSET recompute (P1) — Est 1.0h</h3>
+<ul>
+<li>ZREM fraudulent user from max_bids</li>
+<li>Recompute leader + visible price deterministically</li>
+<li>Update state + publish update</li>
+</ul>
+<h3 id="obs-401402403-observability-p1-est-25h-total">OBS-401/402/403 — Observability (P1) — Est 2.5h total</h3>
+<ul>
+<li>Add actuator endpoints</li>
+<li>Add counters: bids total, collisions, rollbacks</li>
+<li>Provide live stats via periodic logs or /stats endpoint</li>
+</ul>
+<h3 id="qa-501502-testing-evidence-p0p1-est-35h-total">QA-501/502 — Testing &amp; Evidence (P0/P1) — Est 3.5h total</h3>
+<ul>
+<li>docs/TESTING.md + docs/evidence folder</li>
+<li>Integration tests for Lua proxy bidding + rollback</li>
+<li>SSE smoke test</li>
+</ul>
+<h3 id="doc-601602-docs-refresh-p0-est-25h-total">DOC-601/602 — Docs refresh (P0) — Est 2.5h total</h3>
+<ul>
+<li>Update architecture + decisions docs to match implementation</li>
+<li>README includes demo steps and evidence links</li>
+</ul>
+<h2 id="evidence-locations">Evidence locations</h2>
+<ul>
+<li>docs/TESTING.md</li>
+<li>docs/evidence/<ul>
+<li>tests-pass.png</li>
+<li>sse-sample.txt</li>
+<li>metrics-sample.txt or png</li>
+</ul>
+</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

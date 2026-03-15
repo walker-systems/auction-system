@@ -1,0 +1,2019 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Real-Time Bidding & Fraud Detection Platform">
+      
+      
+        <meta name="author" content="Justin Walker">
+      
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../engine/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+    
+    
+      
+        <title>Architecture Decisions - Justin Walker | Portfolio</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture-decision-records-adr" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Justin Walker | Portfolio" class="md-header__button md-logo" aria-label="Justin Walker | Portfolio" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Justin Walker | Portfolio
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture Decisions
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Decisions
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../engine/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Component: Bidding Engine
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../sentinel/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Component: Sentinel Service
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Justin Walker | Portfolio" class="md-nav__button md-logo" aria-label="Justin Walker | Portfolio" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Justin Walker | Portfolio
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#adr-001-use-of-reactive-redis-over-rdbms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-001: Use of Reactive Redis over RDBMS
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-001: Use of Reactive Redis over RDBMS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-002-java-25-records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-002: Java 25 &amp; Records
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-002: Java 25 &amp; Records">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-003-adoption-of-reactiveredistemplate-json-serialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-003: Adoption of ReactiveRedisTemplate &amp; JSON Serialization
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-003: Adoption of ReactiveRedisTemplate &amp; JSON Serialization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-004-using-monodefer-for-reactive-database-mocking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-004: Using Mono.defer() for Reactive Database Mocking
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-004: Using Mono.defer() for Reactive Database Mocking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-005-decoupling-sentinel-from-bidding-engines-redis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-005: Decoupling Sentinel from Bidding Engine's Redis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-005: Decoupling Sentinel from Bidding Engine&#39;s Redis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-006-providing-the-sentinel-a-feedback-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-006: Providing the Sentinel a Feedback Loop
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-006: Providing the Sentinel a Feedback Loop">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-007-upgrading-to-event-sourcing-for-rollbacks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-007: Upgrading to Event Sourcing for Rollbacks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-007: Upgrading to Event Sourcing for Rollbacks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-008-deepening-ai-functionality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-008: Deepening AI Functionality
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-008: Deepening AI Functionality">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-009-decoupled-ml-pipeline-via-synthetic-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-009: Decoupled ML Pipeline via Synthetic Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-009: Decoupled ML Pipeline via Synthetic Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-010-containerization-strategy-for-python-ml-microservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-010: Containerization Strategy for Python ML Microservice
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-010: Containerization Strategy for Python ML Microservice">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-011-atomic-proxy-bidding-via-redis-lua-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-011: Atomic Proxy Bidding via Redis Lua Scripts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-011: Atomic Proxy Bidding via Redis Lua Scripts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-012-integration-testing-via-testcontainers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-012: Integration Testing via Testcontainers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-012: Integration Testing via Testcontainers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-013-epoch-timestamps-for-cross-boundary-time-math" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-013: Epoch Timestamps for Cross-Boundary Time Math
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-013: Epoch Timestamps for Cross-Boundary Time Math">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../engine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component: Bidding Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sentinel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component: Sentinel Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#adr-001-use-of-reactive-redis-over-rdbms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-001: Use of Reactive Redis over RDBMS
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-001: Use of Reactive Redis over RDBMS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-002-java-25-records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-002: Java 25 &amp; Records
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-002: Java 25 &amp; Records">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-003-adoption-of-reactiveredistemplate-json-serialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-003: Adoption of ReactiveRedisTemplate &amp; JSON Serialization
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-003: Adoption of ReactiveRedisTemplate &amp; JSON Serialization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-004-using-monodefer-for-reactive-database-mocking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-004: Using Mono.defer() for Reactive Database Mocking
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-004: Using Mono.defer() for Reactive Database Mocking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-005-decoupling-sentinel-from-bidding-engines-redis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-005: Decoupling Sentinel from Bidding Engine's Redis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-005: Decoupling Sentinel from Bidding Engine&#39;s Redis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-006-providing-the-sentinel-a-feedback-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-006: Providing the Sentinel a Feedback Loop
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-006: Providing the Sentinel a Feedback Loop">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-007-upgrading-to-event-sourcing-for-rollbacks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-007: Upgrading to Event Sourcing for Rollbacks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-007: Upgrading to Event Sourcing for Rollbacks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-008-deepening-ai-functionality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-008: Deepening AI Functionality
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-008: Deepening AI Functionality">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-009-decoupled-ml-pipeline-via-synthetic-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-009: Decoupled ML Pipeline via Synthetic Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-009: Decoupled ML Pipeline via Synthetic Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-010-containerization-strategy-for-python-ml-microservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-010: Containerization Strategy for Python ML Microservice
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-010: Containerization Strategy for Python ML Microservice">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-011-atomic-proxy-bidding-via-redis-lua-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-011: Atomic Proxy Bidding via Redis Lua Scripts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-011: Atomic Proxy Bidding via Redis Lua Scripts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-012-integration-testing-via-testcontainers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-012: Integration Testing via Testcontainers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-012: Integration Testing via Testcontainers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adr-013-epoch-timestamps-for-cross-boundary-time-math" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADR-013: Epoch Timestamps for Cross-Boundary Time Math
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ADR-013: Epoch Timestamps for Cross-Boundary Time Math">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#context_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consequences_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="architecture-decision-records-adr">Architecture Decision Records (ADR)</h1>
+<h2 id="adr-001-use-of-reactive-redis-over-rdbms">ADR-001: Use of Reactive Redis over RDBMS</h2>
+<h3 id="context">Context</h3>
+<p>Auctions experience sudden traffic spikes (10k+ TPS) in the final seconds. Standard relational databases (like Postgres) struggle to handle this concurrency without heavy scaling.</p>
+<h3 id="decision">Decision</h3>
+<p><strong>Spring Data Redis Reactive</strong> will be used as the primary database for active auctions.</p>
+<h3 id="consequences">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Very fast read/writes (&lt;5ms) and built-in support for atomic operations.</li>
+<li><strong>Cons:</strong> All active auction data must fit in server RAM.</li>
+<li><strong>Mitigation:</strong> Redis AOF (Append Only File) is enabled to back up data to the disk.</li>
+</ul>
+<hr />
+<h2 id="adr-002-java-25-records">ADR-002: Java 25 &amp; Records</h2>
+<h3 id="context_1">Context</h3>
+<p>Domain objects in this bidding system mostly hold data, rather than complex business logic.</p>
+<h3 id="decision_1">Decision</h3>
+<p><strong>Java 25 Records</strong> will be used for all domain models.</p>
+<h3 id="consequences_1">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Immutable and thread-safe by default.</li>
+<li><strong>Cons:</strong> Cannot use standard JPA (Hibernate) lazy loading. This is acceptable since Redis is used instead of JPA.</li>
+</ul>
+<hr />
+<h2 id="adr-003-adoption-of-reactiveredistemplate-json-serialization">ADR-003: Adoption of ReactiveRedisTemplate &amp; JSON Serialization</h2>
+<h3 id="context_2">Context</h3>
+<p>Standard Spring Data reactive repositories do not support Redis. Additionally, the default JSON serializer is deprecated.</p>
+<h3 id="decision_2">Decision</h3>
+<ol>
+<li>Database access methods (Repository pattern) are manually written using <code>ReactiveRedisTemplate</code>.</li>
+<li>The newer <code>RedisSerializer.json()</code> is used for serialization.</li>
+</ol>
+<h3 id="consequences_2">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Fully non-blocking I/O.</li>
+<li><strong>Cons:</strong> Requires writing custom code for standard database actions (<code>save</code>, <code>find</code>, <code>delete</code>).</li>
+</ul>
+<hr />
+<h2 id="adr-004-using-monodefer-for-reactive-database-mocking">ADR-004: Using Mono.defer() for Reactive Database Mocking</h2>
+<h3 id="context_3">Context</h3>
+<p>When unit testing code that retries a failed database update, standard mock objects return the exact same data on every retry. This fails to simulate a real database where the data might change between retries.</p>
+<h3 id="decision_3">Decision</h3>
+<p><code>Mono.defer()</code> is utilized when mocking reactive streams that need to simulate changing states. </p>
+<h3 id="consequences_3">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Tests correctly simulate the database changing during a retry loop.</li>
+<li><strong>Cons:</strong> N/A</li>
+</ul>
+<hr />
+<h2 id="adr-005-decoupling-sentinel-from-bidding-engines-redis">ADR-005: Decoupling Sentinel from Bidding Engine's Redis</h2>
+<h3 id="context_4">Context</h3>
+<p>Currently, the AI (Sentinel) and the main bidding system share one Redis database. Heavy AI data processing could slow down the core bidding system.</p>
+<h3 id="decision_4">Decision</h3>
+<p><em>(Planned)</em> The Sentinel's state management will be moved to its own separate database. Redis will only be shared for real-time messaging (Pub/Sub).</p>
+<h3 id="consequences_4">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Prevents the AI from slowing down user bids.</li>
+<li><strong>Cons:</strong> Requires setting up and managing more database infrastructure.</li>
+</ul>
+<hr />
+<h2 id="adr-006-providing-the-sentinel-a-feedback-loop">ADR-006: Providing the Sentinel a Feedback Loop</h2>
+<h3 id="context_5">Context</h3>
+<p>The AI currently evaluates bids without any way to learn from its mistakes (e.g., flagging a real user as a bot).</p>
+<h3 id="decision_5">Decision</h3>
+<p><em>(Planned)</em> AI decisions will be saved to an audit log. Admins will be allowed to correct mistakes, and this corrected data will be used to retrain the model.</p>
+<h3 id="consequences_5">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> The AI gets more accurate over time.</li>
+<li><strong>Cons:</strong> Requires building an admin interface and a data feedback pipeline.</li>
+</ul>
+<hr />
+<h2 id="adr-007-upgrading-to-event-sourcing-for-rollbacks">ADR-007: Upgrading to Event Sourcing for Rollbacks</h2>
+<h3 id="context_6">Context</h3>
+<p>When a fraudulent bid is canceled, the database is currently overwritten. This deletes the record of who the previous valid bidder was.</p>
+<h3 id="decision_6">Decision</h3>
+<p><em>(Planned)</em> The architecture will transition to Event Sourcing. Instead of just saving the "current bid," every action (bids, rejections) will be saved as an append-only log of events.</p>
+<h3 id="consequences_6">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Makes it easy and accurate to undo fraudulent bids. Provides excellent historical data for training the AI.</li>
+<li><strong>Cons:</strong> Requires a major architectural rewrite.</li>
+</ul>
+<hr />
+<h2 id="adr-008-deepening-ai-functionality">ADR-008: Deepening AI Functionality</h2>
+<h3 id="context_7">Context</h3>
+<p>Using a standard LLM via Spring AI is too slow and expensive for evaluating high-speed numerical data (like reaction times and bid amounts).</p>
+<h3 id="decision_7">Decision</h3>
+<p><em>(Planned)</em> The general LLM will be replaced with a specialized Machine Learning model (<code>CatBoost</code>) running on a Python <code>FastAPI</code> server.</p>
+<h3 id="consequences_7">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Much faster processing and lower costs.</li>
+<li><strong>Cons:</strong> Adds Python to the tech stack, necessitating the management of a multi-language (polyglot) architecture.</li>
+</ul>
+<hr />
+<h2 id="adr-009-decoupled-ml-pipeline-via-synthetic-data">ADR-009: Decoupled ML Pipeline via Synthetic Data</h2>
+<h3 id="context_8">Context</h3>
+<p>Building a complex ML model and connecting a new Python server to the existing Java backend at the same time is risky. It can cause massive integration bugs at the end of the sprint.</p>
+<h3 id="decision_8">Decision</h3>
+<p>The network connection will be built and tested first using temporary, fake data and a simple AI model. Once the Java and Python servers communicate perfectly, the real, complex ML model will be swapped in.</p>
+<h3 id="consequences_8">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Proves the network plumbing works early. Keeps the Java and Python code strictly decoupled.</li>
+<li><strong>Cons:</strong> Requires writing throwaway scripts to generate the fake data.</li>
+</ul>
+<hr />
+<h2 id="adr-010-containerization-strategy-for-python-ml-microservice">ADR-010: Containerization Strategy for Python ML Microservice</h2>
+<h3 id="context_9">Context</h3>
+<p>Java applications often use automated Buildpacks (like <code>mvn spring-boot:build-image</code>) to create containers without manual setup. However, Python Machine Learning libraries (like CatBoost) require specific operating system dependencies. Automated tools often fail to guess and install these low-level requirements correctly.</p>
+<h3 id="decision_9">Decision</h3>
+<p>A standard <code>Dockerfile</code> will be used to containerize the Python ML microservice instead of automated Buildpacks.</p>
+<h3 id="consequences_9">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Guarantees the production container exactly matches the local training environment.</li>
+<li><strong>Cons:</strong> Requires manual file maintenance and differs from the Java project's container strategy.</li>
+</ul>
+<h2 id="adr-011-atomic-proxy-bidding-via-redis-lua-scripts">ADR-011: Atomic Proxy Bidding via Redis Lua Scripts</h2>
+<h3 id="context_10">Context</h3>
+<p>High-concurrency proxy bidding (multiple users setting maximum bids simultaneously) causes race conditions if handled via standard Java read-modify-write operations across the network.</p>
+<h3 id="decision_10">Decision</h3>
+<p>Core bidding logic, including tiered increment calculations and proxy bid resolution, is implemented as a custom Lua script executed directly inside Redis.</p>
+<h3 id="consequences_10">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Guarantees atomic execution and prevents race conditions without the overhead of distributed locks.</li>
+<li><strong>Cons:</strong> Business logic is split between Java and Lua, making debugging and maintenance more complex.</li>
+</ul>
+<hr />
+<h2 id="adr-012-integration-testing-via-testcontainers">ADR-012: Integration Testing via Testcontainers</h2>
+<h3 id="context_11">Context</h3>
+<p>Core database operations rely heavily on custom Redis Lua scripts. These scripts cannot be accurately simulated using standard Java mock objects (like Mockito) during testing.</p>
+<h3 id="decision_11">Decision</h3>
+<p>Testcontainers is adopted for integration tests, spinning up ephemeral Redis Stack Docker containers during the test lifecycle.</p>
+<h3 id="consequences_11">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Verifies actual database and script behavior against a real, isolated Redis engine.</li>
+<li><strong>Cons:</strong> Increases test suite execution time and requires Docker to be running on the host machine.</li>
+</ul>
+<hr />
+<h2 id="adr-013-epoch-timestamps-for-cross-boundary-time-math">ADR-013: Epoch Timestamps for Cross-Boundary Time Math</h2>
+<h3 id="context_12">Context</h3>
+<p>The anti-sniping "soft close" feature requires comparing and extending auction end times inside a Redis Lua script. Passing Java <code>Instant</code> objects natively caused serialization and comparison mismatches between JSON strings and numeric database formats.</p>
+<h3 id="decision_12">Decision</h3>
+<p>Time thresholds are calculated as Epoch seconds in Java and passed to Lua scripts as numeric values for direct mathematical comparison.</p>
+<h3 id="consequences_12">Consequences</h3>
+<ul>
+<li><strong>Pros:</strong> Eliminates date parsing errors and guarantees precise, cross-boundary time comparisons.</li>
+<li><strong>Cons:</strong> Requires manual conversion to and from epoch seconds when invoking database scripts.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

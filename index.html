@@ -1,0 +1,953 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Real-Time Bidding & Fraud Detection Platform">
+      
+      
+        <meta name="author" content="Justin Walker">
+      
+      
+      
+      
+        <link rel="next" href="ADR/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+    
+    
+      
+        <title>Justin Walker | Portfolio</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#real-time-bidding-fraud-detection-platform" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="." title="Justin Walker | Portfolio" class="md-header__button md-logo" aria-label="Justin Walker | Portfolio" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Justin Walker | Portfolio
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Home
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="ADR/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Decisions
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="engine/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Component: Bidding Engine
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="sentinel/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Component: Sentinel Service
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="Justin Walker | Portfolio" class="md-nav__button md-logo" aria-label="Justin Walker | Portfolio" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Justin Walker | Portfolio
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="." class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🏗️ How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🏗️ How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-core-pieces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Core Pieces
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🚀 Quick Start Guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🚀 Quick Start Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1-get-the-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Get the Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-start-the-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Start the Database
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-start-the-bidding-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Start the Bidding Engine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-start-the-ai-sentinel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Start the AI Sentinel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-open-the-storefront" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Open the Storefront
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-stop-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛑 How to Stop It
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛠️ Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lets-connect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📬 Let's Connect
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="engine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component: Bidding Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sentinel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component: Sentinel Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🏗️ How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🏗️ How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-core-pieces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Core Pieces
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🚀 Quick Start Guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🚀 Quick Start Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1-get-the-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Get the Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-start-the-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Start the Database
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-start-the-bidding-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Start the Bidding Engine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-start-the-ai-sentinel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Start the AI Sentinel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-open-the-storefront" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Open the Storefront
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-stop-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛑 How to Stop It
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛠️ Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lets-connect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📬 Let's Connect
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="real-time-bidding-fraud-detection-platform">⚡ Real-Time Bidding &amp; Fraud Detection Platform</h1>
+<p>This is a live auction platform that uses AI to catch fraudulent bids in real time. It is built with Spring Boot and Redis to handle fast, continuous data streams, instantly blocking bots without slowing down the user experience.</p>
+<h2 id="how-it-works">🏗️ How It Works</h2>
+<p>Here is a high-level look at how data moves through the platform when a bid is placed:</p>
+<pre class="mermaid"><code>graph LR
+    %% Define styles
+    classDef user fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff,font-weight:bold;
+    classDef core fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff,font-weight:bold;
+    classDef db fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff,font-weight:bold;
+    classDef ai fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff,font-weight:bold;
+    classDef external fill:#374151,stroke:#1f2937,stroke-width:2px,color:#fff,font-weight:bold;
+
+    %% Nodes
+    User((User)):::user
+    BE[Bidding Engine]:::core
+    Redis[(Redis Pub/Sub)]:::db
+    Sentinel[Sentinel Service]:::ai
+    LLM[OpenAI]:::external
+
+    %% Flow
+    User --&gt;|1. Places Bid| BE
+    BE --&gt;|2. Saves &amp; Broadcasts| Redis
+    Redis --&gt;|3. Triggers Alert| Sentinel
+    Sentinel &lt;--&gt;|4. Checks Context| LLM
+    Sentinel -.-&gt;|5. Rejects Fraud| Redis
+    Redis -.-&gt;|6. Live UI Update| BE
+    BE -.-&gt;|7. Shows Rejection| User</code></pre>
+<h3 id="the-core-pieces">The Core Pieces</h3>
+<ul>
+<li><strong>The Storefront (Bidding Engine):</strong> This is the user interface. It takes incoming bids and uses active streams to update the screen instantly for everyone watching, without them needing to refresh the page.</li>
+<li><strong>The Broker (Redis):</strong> This acts as the central nervous system. Instead of the storefront talking directly to the security service, they both just talk to Redis. This keeps the storefront moving fast.</li>
+<li><strong>The Security Guard (Sentinel):</strong> This service silently watches every bid that drops into Redis. It packages the bid's context and asks the AI if the behavior looks like a bot. If it catches fraud, it sends a kill signal back through Redis to reverse the bid on everyone's screen.</li>
+</ul>
+<hr />
+<h2 id="quick-start-guide">🚀 Quick Start Guide</h2>
+<p>Follow these steps to run the platform locally on your machine.</p>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li><strong>Docker</strong> (must be running in the background)</li>
+<li><strong>Java 21+</strong></li>
+<li><strong>OpenAI API Key</strong> (needed for the Sentinel to analyze bids)</li>
+</ul>
+<h3 id="1-get-the-code">1. Get the Code</h3>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span><span class="o">[</span>https://github.com/walker-systems/auction-system.git<span class="o">](</span>https://github.com/walker-systems/auction-system.git<span class="o">)</span>
+<span class="nb">cd</span><span class="w"> </span>auction-system
+</code></pre></div>
+<h3 id="2-start-the-database">2. Start the Database</h3>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+</code></pre></div>
+<h3 id="3-start-the-bidding-engine">3. Start the Bidding Engine</h3>
+<p>Open a terminal in the root folder and run:
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>bidding-engine
+./mvnw<span class="w"> </span>spring-boot:run
+</code></pre></div></p>
+<h3 id="4-start-the-ai-sentinel">4. Start the AI Sentinel</h3>
+<p>Open a <strong>new terminal window</strong>, set your API key, and run the service:
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>auction-system/sentinel-service
+<span class="nb">export</span><span class="w"> </span><span class="nv">SPRING_AI_OPENAI_API_KEY</span><span class="o">=</span><span class="s1">&#39;sk-your-actual-key-here&#39;</span>
+./mvnw<span class="w"> </span>spring-boot:run
+</code></pre></div></p>
+<h3 id="5-open-the-storefront">5. Open the Storefront</h3>
+<p>Go to <strong><code>http://localhost:8080</code></strong> in your browser.
+* Click <strong>"Start Chaos"</strong> to unleash the demo bots.
+* Watch the AI intercept and reverse fake bids in real time.</p>
+<hr />
+<h2 id="how-to-stop-it">🛑 How to Stop It</h2>
+<p>When you are done testing, you can easily clean up your environment:</p>
+<ol>
+<li><strong>Stop the Apps:</strong> Press <code>Ctrl + C</code> in both terminal windows (or simply close the tabs).</li>
+<li><strong>Stop the Database:</strong> Run this command in the root folder to shut down Redis safely:
+   <div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>down
+</code></pre></div></li>
+</ol>
+<hr />
+<h2 id="troubleshooting">🛠️ Troubleshooting</h2>
+<ul>
+<li><strong>Port 8080 or 8081 is in use:</strong> If the apps fail to start, another background process might be using their ports. Find and kill the process:
+  <div class="highlight"><pre><span></span><code>lsof<span class="w"> </span>-i<span class="w"> </span>:8080
+<span class="nb">kill</span><span class="w"> </span>-9<span class="w"> </span>&lt;PID&gt;
+</code></pre></div></li>
+<li><strong>Maven Wrapper (<code>./mvnw</code>) fails:</strong> If hidden <code>.mvn</code> folders were lost during the download, regenerate the wrapper using your system's global Maven installation:
+  <div class="highlight"><pre><span></span><code>mvn<span class="w"> </span>wrapper:wrapper
+</code></pre></div></li>
+<li><strong>App crashes immediately:</strong> Make sure you exported the <code>SPRING_AI_OPENAI_API_KEY</code> in the exact same terminal window where you are running the Sentinel service.</li>
+</ul>
+<hr />
+<h2 id="lets-connect">📬 Let's Connect</h2>
+<p><strong>Justin Walker</strong></p>
+<ul>
+<li>🌐 <strong>Portfolio:</strong> <a href="https://justin-castillo.github.io/">justin-castillo.github.io</a></li>
+<li>💼 <strong>LinkedIn:</strong> <a href="https://www.linkedin.com/in/justin-walker-0403923b1/">Justin Walker</a></li>
+<li>📧 <strong>Email:</strong> <a href="mailto:justinwalker.contact@gmail.com">justinwalker.contact@gmail.com</a></li>
+</ul>
+<hr />
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.tabs", "navigation.sections"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
