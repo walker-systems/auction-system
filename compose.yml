@@ -58,12 +58,16 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ... (redis, sentinel-ml, sentinel-service, bidding-engine stay the same) ...
+
   prometheus:
     image: prom/prometheus:latest
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      # 👇 Add this line to save historical metrics
+      - prometheus-data:/prometheus
     networks:
       - bidstream-net
 
@@ -73,6 +77,9 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      # 👇 Add this line to save dashboards and passwords
+      - grafana-data:/var/lib/grafana
     networks:
       - bidstream-net
     depends_on:
@@ -81,3 +88,8 @@ services:
 networks:
   bidstream-net:
     driver: bridge
+
+# 👇 Add this brand new block at the very bottom of the file!
+volumes:
+  grafana-data:
+  prometheus-data:
