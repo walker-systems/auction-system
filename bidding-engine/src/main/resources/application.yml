@@ -1,3 +1,7 @@
+server:
+  port: 8080
+  address: 0.0.0.0
+
 spring:
   application:
     name: bidding-engine
@@ -22,6 +26,15 @@ spring:
 
   main:
     web-application-type: reactive
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: bidding-engine
 
 logging:
   level:

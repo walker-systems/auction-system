@@ -6,16 +6,38 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Execute deployment commands via SSH
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build Java Applications (On GitHub Servers!)
+        run: mvn clean package -DskipTests
+
+      - name: Copy Pre-built files to Droplet via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          source: "compose.yml,prometheus.yml,bidding-engine/Dockerfile,sentinel-service/Dockerfile,sentinel-ml/,bidding-engine/target/*.jar,sentinel-service/target/*.jar"
+          target: "/root/auction-system"
+
+      - name: Restart Docker Compose on Droplet
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DROPLET_IP }}
           username: root
           key: ${{ secrets.DROPLET_SSH_KEY }}
           script: |
-            cd ~/auction-system
-            git pull origin main
+            cd /root/auction-system
+            docker compose down
             docker compose up --build -d

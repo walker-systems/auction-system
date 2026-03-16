@@ -32,22 +32,32 @@ public class AuctionService {
     private Timer proxyBidTimer;
     private Timer standardBidTimer;
 
+    private static final String METRIC_BIDS_PROCESSING = "bids.processing";
+
     @PostConstruct
     public void initMetrics() {
-        this.proxyBidTimer = Timer.builder("bids.processing")
+        this.proxyBidTimer = Timer.builder(METRIC_BIDS_PROCESSING)
                 .tag("type", "proxy")
                 .publishPercentiles(0.99)
+                .publishPercentileHistogram()
                 .register(meterRegistry);
 
-        this.standardBidTimer = Timer.builder("bids.processing")
+        this.standardBidTimer = Timer.builder(METRIC_BIDS_PROCESSING)
                 .tag("type", "standard")
                 .publishPercentiles(0.99)
+                .publishPercentileHistogram()
                 .register(meterRegistry);
     }
 
     public double getP99LatencyMs() {
-        if (proxyBidTimer == null) return 0.0;
-        ValueAtPercentile[] percentiles = proxyBidTimer.takeSnapshot().percentileValues();
+        double proxyP99 = getTimerP99(proxyBidTimer);
+        double standardP99 = getTimerP99(standardBidTimer);
+        return Math.max(proxyP99, standardP99);
+    }
+
+    private double getTimerP99(Timer timer) {
+        if (timer == null) return 0.0;
+        ValueAtPercentile[] percentiles = timer.takeSnapshot().percentileValues();
         for (ValueAtPercentile p : percentiles) {
             if (p.percentile() == 0.99) {
                 return p.value(TimeUnit.MILLISECONDS);

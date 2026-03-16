@@ -5,10 +5,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import reactor.test.StepVerifier;
 
 @SpringBootTest
+@Import(TestcontainersConfiguration.class)
 public class RateLimiterTest {
 
     @Autowired
