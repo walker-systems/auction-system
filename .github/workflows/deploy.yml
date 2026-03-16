@@ -28,7 +28,6 @@ jobs:
           host: ${{ secrets.DROPLET_IP }}
           username: root
           key: ${{ secrets.DROPLET_SSH_KEY }}
-          # 👇 FIX: Using exact filenames instead of *.jar
           source: "compose.yml,prometheus.yml,bidding-engine/Dockerfile,sentinel-service/Dockerfile,sentinel-ml/,bidding-engine/target/bidding-engine-0.0.1-SNAPSHOT.jar,sentinel-service/target/sentinel-service-0.0.1-SNAPSHOT.jar"
           target: "/root/auction-system"
 
