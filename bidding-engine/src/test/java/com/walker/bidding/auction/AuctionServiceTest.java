@@ -1,5 +1,6 @@
 package com.walker.bidding.auction;
 
+import io.micrometer.core.instrument.Timer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -142,5 +143,36 @@ class AuctionServiceTest {
                     Assertions.assertEquals(3, stateC.version());
                 })
                 .verifyComplete();
+    }
+
+    @Test
+    void placeBid_shouldRecordStandardBidMetrics() {
+        String auctionId = "metricAuction";
+        Auction auction = new Auction(
+                auctionId, "item", new BigDecimal("10.00"),
+                "userA", Instant.now().plusSeconds(3600), true, 1,
+                null, null, 0, 0, 0
+        );
+
+        Mockito.when(auctionRepository.findById(auctionId)).thenReturn(Mono.just(auction));
+        Mockito.when(auctionRepository.updateAuction(any(Auction.class))).thenReturn(Mono.just(true));
+
+        Mono<Auction> bidMono = auctionService.placeBid(
+                auctionId, "userB", new BigDecimal("15.00"),
+                "127.0.0.1", "test-agent", 100
+        );
+
+        StepVerifier.create(bidMono)
+                .expectNextCount(1)
+                .verifyComplete();
+
+        Timer standardTimer = meterRegistry.find("bids.processing").tag("type", "standard").timer();
+        Timer proxyTimer = meterRegistry.find("bids.processing").tag("type", "proxy").timer();
+
+        Assertions.assertNotNull(standardTimer, "Standard timer should exist");
+        Assertions.assertEquals(1, standardTimer.count(), "Should have recorded 1 standard bid");
+
+        Assertions.assertNotNull(proxyTimer, "Proxy timer should exist");
+        Assertions.assertEquals(0, proxyTimer.count(), "Should have recorded 0 proxy bids");
     }
 }
