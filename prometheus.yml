@@ -5,9 +5,9 @@ scrape_configs:
   - job_name: 'bidding-engine'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8080']
+      - targets: ['bidding-engine:8080']
 
   - job_name: 'sentinel-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8081']
+      - targets: ['sentinel-service:8081']
