@@ -1,5 +1,6 @@
 server:
   port: 8081
+  address: 0.0.0.0
 
 spring:
   application:
@@ -16,3 +17,12 @@ spring:
 logging:
   level:
     org.springframework.data.redis: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: sentinel-service
