@@ -221,7 +221,7 @@ public class AuctionService {
                 .then();
     }
 
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 600000)
     public void sweepExpiredAuctions() {
         auctionRepository.findAll()
                 .filter(Auction::active)

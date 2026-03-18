@@ -56,7 +56,7 @@ public class DemoBotService {
         }
         log.info("🤖 Demo Bot Swarm ACTIVATED! Unleashing 250+ TPS...");
 
-        botTask = Flux.range(1, 25)
+        botTask = Flux.range(1, 5)
                 .flatMap(_ -> Flux.interval(
                                         Duration.ofMillis(ThreadLocalRandom.current().nextInt(100)),
                                         Duration.ofMillis(100)
