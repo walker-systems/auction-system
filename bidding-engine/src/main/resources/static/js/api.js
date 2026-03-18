@@ -21,12 +21,17 @@ function loadStorefront() {
                     return response.json();
                 })
                 .then(auctions => {
+                    if (auctions.length === 0) {
+                        const loadingText = document.getElementById('loading-text');
+                        if (loadingText) loadingText.innerText = "Waking up server... generating fresh auctions.";
+                        resetSystem();
+                        return;
+                    }
                     const overlay = document.getElementById('loading-overlay');
                     if (overlay) {
                         overlay.classList.add('opacity-0', 'pointer-events-none');
                         setTimeout(() => overlay.remove(), 500);
                     }
-
                     auctions.forEach(auction => {
                         let endMs = Date.now() + 86400000;
                         if (auction.endsAt) {

@@ -10,6 +10,21 @@ function connectToGlobalStream() {
         const auctionId = updatedAuction.id;
         const auctionState = activeAuctions[auctionId];
 
+        if (!isDemoRunning && updatedAuction.highBidder && updatedAuction.highBidder.startsWith('Bot-')) {
+            isDemoRunning = true;
+
+            const btn = document.getElementById('demo-btn');
+            if (btn) {
+                btn.innerHTML = 'Stop Demo (Running Globally)';
+                btn.classList.replace('bg-blue-600', 'bg-purple-600');
+                btn.classList.replace('hover:bg-blue-700', 'hover:bg-purple-700');
+            }
+
+            if (typeof unlockLogsButton === 'function') unlockLogsButton();
+
+            showCardToast(auctionId, "🚀 DEMO INITIATED BY ANOTHER USER", "bg-purple-600 text-white font-bold border-purple-400");
+        }
+
         if (auctionState && updatedAuction.version > auctionState.version) {
             globalTotalBids++;
             bidTimestamps.push(Date.now());
