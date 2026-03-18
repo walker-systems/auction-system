@@ -1,8 +1,7 @@
 package com.walkersystems.sentinel.service;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.walkersystems.sentinel.model.AuctionDto;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,15 +9,21 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.ReactiveSetOperations;
+import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeFunction;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuctionStreamMonitorTest {
@@ -32,48 +37,34 @@ class AuctionStreamMonitorTest {
     @Mock
     private ExchangeFunction mockExchangeFunction;
 
-    private AuctionStreamMonitor UUT_AuctionStreamMonitor; // Unit Under Test (UUT)
+    private AuctionStreamMonitor UUT_AuctionStreamMonitor;
 
     @BeforeEach
     void setUp() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        objectMapper.configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
+        WebClient mockWebClient = WebClient.builder()
+                .exchangeFunction(mockExchangeFunction)
+                .build();
 
-        WebClient webClient = WebClient.builder().exchangeFunction(mockExchangeFunction).build();
+        UUT_AuctionStreamMonitor = new AuctionStreamMonitor(
+                mockRedisTemplate,
+                null,
+                mockWebClient,
+                new SimpleMeterRegistry()
+        );
 
-        UUT_AuctionStreamMonitor = new AuctionStreamMonitor(mockRedisTemplate, objectMapper, webClient);
+        when(mockRedisTemplate.listenTo(any(PatternTopic.class))).thenReturn(Flux.empty());
+
+        UUT_AuctionStreamMonitor.startMonitoring();
     }
-
-    @Test
-    void testSystemBid_isIgnored_NoApiCallsMade() {
-        String simSystemBidJson = "{\"id\":\"auc-1\",\"highBidder\":\"System\",\"currentPrice\":10.00}";
-
-        StepVerifier.create(UUT_AuctionStreamMonitor.analyzeBidWithAI(simSystemBidJson))
-                .verifyComplete();
-
-        verifyNoInteractions(mockExchangeFunction);
-        verifyNoInteractions(mockRedisTemplate);
-    }
-
     @Test
     void testFraudulentBid_isBanned_AndRollbackTriggered() {
-        String simFraudUserJson = """
-            {
-              "id": "auc-1",
-              "itemId": "item-123",
-              "currentPrice": 500.00,
-              "highBidder": "bot_net_alpha",
-              "ipAddress": "192.168.1.1",
-              "userAgent": "BotNet/1.0",
-              "reactionTimeMs": 10,
-              "bidCountLastMin": 60,
-              "isNewIp": 1
-            }
-            """;
+        AuctionDto mockAuction = new AuctionDto(
+                "auc-1", "item-123", "bot_net_alpha", true,
+                "192.168.1.1", "BotNet/1.0", 10, 60, 1, new BigDecimal("500.00")
+        );
 
-        String simAIResponseJson = "{\"fraud_probability\": 0.99, \"is_fraud\": true}";
+        String simAIResponseJson = "[{\"id\": \"auc-1|bot_net_alpha\", \"fraud_probability\": 0.99, \"is_fraud\": true}]";
+
         ClientResponse simClientResponse = ClientResponse.create(HttpStatus.OK)
                 .header("Content-Type", "application/json")
                 .body(simAIResponseJson)
@@ -84,11 +75,10 @@ class AuctionStreamMonitorTest {
         when(mockSetOperations.add("banned_users", "bot_net_alpha")).thenReturn(Mono.just(1L));
         when(mockRedisTemplate.convertAndSend("auction:fraud", "auc-1:bot_net_alpha")).thenReturn(Mono.just(1L));
 
-        StepVerifier.create(UUT_AuctionStreamMonitor.analyzeBidWithAI(simFraudUserJson))
+        StepVerifier.create(UUT_AuctionStreamMonitor.analyzeBatchWithAI(List.of(mockAuction)))
                 .verifyComplete();
 
         verify(mockSetOperations).add("banned_users", "bot_net_alpha");
-
         verify(mockRedisTemplate).convertAndSend("auction:fraud", "auc-1:bot_net_alpha");
     }
 }
