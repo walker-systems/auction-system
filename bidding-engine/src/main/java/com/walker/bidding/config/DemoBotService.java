@@ -31,6 +31,7 @@ public class DemoBotService {
     private final AuctionService auctionService;
     private final AuctionRepository auctionRepository;
     private Disposable botTask;
+    private Disposable autoShutoffTask;
 
     private List<BotPersona> botSwarm;
 
@@ -56,12 +57,19 @@ public class DemoBotService {
         log.info("🤖 Demo Bot Swarm ACTIVATED! Unleashing 250+ TPS...");
 
         botTask = Flux.range(1, 25)
-                .flatMap(concurrency -> Flux.interval(
+                .flatMap(_ -> Flux.interval(
                                         Duration.ofMillis(ThreadLocalRandom.current().nextInt(100)),
                                         Duration.ofMillis(100)
                                 )
-                                .flatMap(tick -> placeRandomBid())
+                                .flatMap(_ -> placeRandomBid())
                 )
+                .subscribe();
+
+        autoShutoffTask = Mono.delay(Duration.ofMinutes(10))
+                .doOnNext(_ -> {
+                    log.warn("⏱️ 10-Minute Safety Valve Triggered! Stopping bots to save memory.");
+                    stopBotSwarm();
+                })
                 .subscribe();
     }
 
@@ -70,8 +78,10 @@ public class DemoBotService {
             botTask.dispose();
             log.info("🛑 Demo Bot Swarm DEACTIVATED.");
         }
+        if (autoShutoffTask != null && !autoShutoffTask.isDisposed()) {
+            autoShutoffTask.dispose();
+        }
     }
-
     private Mono<Void> placeRandomBid() {
         if (botSwarm == null || botSwarm.isEmpty()) return Mono.empty();
 
