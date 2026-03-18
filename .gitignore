@@ -64,8 +64,8 @@ sentinel-ml/.venv-notebook/**
 catboost_info/
 catboost_info/**
 
-# If you WANT a small demo CSV tracked, add an exception like:
-# !sentinel-ml/fraud_dataset_sample.csv
+# 👇 NEW: Explicitly allow the compiled model so Docker can boot!
+!sentinel-ml/fraud_model.cbm
 
 # --- Redis persistence artifacts ---
 dump.rdb
