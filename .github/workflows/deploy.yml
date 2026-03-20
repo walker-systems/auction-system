@@ -20,7 +20,7 @@ jobs:
           cache: maven
 
       - name: Build Java Applications (On GitHub Servers!)
-        run: mvn clean package -DskipTests
+        run: mvn clean package
 
       - name: Copy Pre-built files to Droplet via SCP
         uses: appleboy/scp-action@v0.1.7

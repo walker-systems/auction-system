@@ -5,7 +5,7 @@ services:
       - "6379:6379"
     networks:
       - bidstream-net
-    command: redis-server --save 60 1 --loglevel warning
+    command: redis-server --appendonly yes --loglevel warning
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -20,6 +20,10 @@ services:
     networks:
       - bidstream-net
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   sentinel-service:
     build:
@@ -40,6 +44,10 @@ services:
       sentinel-ml:
         condition: service_started
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   bidding-engine:
     build:
@@ -57,8 +65,10 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-
-  # ... (redis, sentinel-ml, sentinel-service, bidding-engine stay the same) ...
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   prometheus:
     image: prom/prometheus:latest
@@ -66,7 +76,6 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      # 👇 Add this line to save historical metrics
       - prometheus-data:/prometheus
     networks:
       - bidstream-net
@@ -76,9 +85,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
     volumes:
-      # 👇 Add this line to save dashboards and passwords
       - grafana-data:/var/lib/grafana
     networks:
       - bidstream-net
@@ -89,7 +97,6 @@ networks:
   bidstream-net:
     driver: bridge
 
-# 👇 Add this brand new block at the very bottom of the file!
 volumes:
   grafana-data:
   prometheus-data:
