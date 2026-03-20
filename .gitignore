@@ -17,6 +17,7 @@ Desktop.ini
 *.swp
 *.swo
 *~
+.env
 
 # --- Logs ---
 *.log
@@ -64,7 +65,6 @@ sentinel-ml/.venv-notebook/**
 catboost_info/
 catboost_info/**
 
-# 👇 NEW: Explicitly allow the compiled model so Docker can boot!
 !sentinel-ml/fraud_model.cbm
 
 # --- Redis persistence artifacts ---
