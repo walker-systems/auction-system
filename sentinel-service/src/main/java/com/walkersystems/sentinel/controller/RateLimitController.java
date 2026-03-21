@@ -10,10 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
@@ -48,7 +45,7 @@ public class RateLimitController {
                     content = @Content(schema = @Schema(hidden = true))
             )
     })
-    @GetMapping("/check")
+    @PostMapping("/check")
     public Mono<ResponseEntity<Map<String, Boolean>>> checkRateLimit(
             @Parameter(description = "Unique identifier for the user or service (UUID, API Key, IP)", example = "user_123")
             @RequestHeader(value = "X-User-ID", defaultValue = "guest") String userId,

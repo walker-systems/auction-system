@@ -27,7 +27,7 @@ public class RateLimiterControllerTest {
         when(rateLimiterService.isAllowed(anyString(), anyInt(), anyInt(), anyInt()))
                 .thenReturn(Mono.just(true));
 
-        webTestClient.get()
+        webTestClient.post()
                 .uri("/check?capacity=10&rate=1")
                 .header("X-User-ID", "test-user")
                 .exchange()
@@ -42,7 +42,7 @@ public class RateLimiterControllerTest {
         when(rateLimiterService.isAllowed(anyString(), anyInt(), anyInt(), anyInt()))
                 .thenReturn(Mono.just(false));
 
-        webTestClient.get()
+        webTestClient.post()
                 .uri("/check?capacity=10&rate=1")
                 .header("X-User-ID", "spammer")
                 .exchange()
