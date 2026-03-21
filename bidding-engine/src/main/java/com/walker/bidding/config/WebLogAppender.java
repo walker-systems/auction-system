@@ -10,12 +10,16 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
 public class WebLogAppender extends AppenderBase<ILoggingEvent> implements ApplicationListener<ApplicationReadyEvent> {
 
     private final LogStreamService logStreamService;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
+
+    private static final ExecutorService loggingExecutor = Executors.newSingleThreadExecutor();
 
     public WebLogAppender(LogStreamService logStreamService) {
         this.logStreamService = logStreamService;
@@ -40,7 +44,21 @@ public class WebLogAppender extends AppenderBase<ILoggingEvent> implements Appli
                     eventObject.getLevel(),
                     eventObject.getFormattedMessage()
             );
-            logStreamService.pushLog(formattedLog);
+
+            loggingExecutor.submit(() -> {
+                try {
+                    logStreamService.pushLog(formattedLog);
+                } catch (Exception e) {
+                    // Fail silently so a broken UI connection doesn't crash the engine
+                }
+            });
         }
+    }
+
+    // Clean up the thread pool on shutdown
+    @Override
+    public void stop() {
+        loggingExecutor.shutdown();
+        super.stop();
     }
 }
