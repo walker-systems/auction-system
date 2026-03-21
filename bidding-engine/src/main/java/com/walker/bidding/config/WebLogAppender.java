@@ -19,7 +19,7 @@ public class WebLogAppender extends AppenderBase<ILoggingEvent> implements Appli
     private final LogStreamService logStreamService;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
-    private static final ExecutorService loggingExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService loggingExecutor = Executors.newSingleThreadExecutor();
 
     public WebLogAppender(LogStreamService logStreamService) {
         this.logStreamService = logStreamService;
