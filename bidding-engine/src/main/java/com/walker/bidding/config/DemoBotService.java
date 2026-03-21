@@ -87,45 +87,36 @@ public class DemoBotService {
     private Mono<Void> placeRandomBid() {
         if (botSwarm == null || botSwarm.isEmpty()) return Mono.empty();
 
-        // 1. Fetch active IDs dynamically from Redis
-        return auctionRepository.findAll()
-                .filter(Auction::active)
-                .map(Auction::id)
-                .collectList()
-                .flatMap(activeIds -> {
-                    if (activeIds.isEmpty()) {
-                        return Mono.empty();
-                    }
+        int roll = ThreadLocalRandom.current().nextInt(100);
+        int targetNum = (roll < 15)
+                ? ThreadLocalRandom.current().nextInt(1, 13)
+                : ThreadLocalRandom.current().nextInt(13, 10001);
 
-                    // 2. Pick a random active auction ID
-                    String targetId = activeIds.get(ThreadLocalRandom.current().nextInt(activeIds.size()));
+        String targetId = "auc-" + targetNum;
 
-                    // 3. Continue with the existing persona and bidding logic
-                    return auctionRepository.findById(targetId)
-                            .flatMap(target -> {
-                                if (!target.active()) return Mono.empty();
+        return auctionRepository.findById(targetId)
+                .flatMap(target -> {
+                    if (!target.active()) return Mono.empty();
 
-                                BotPersona bot = botSwarm.get(ThreadLocalRandom.current().nextInt(botSwarm.size()));
+                    BotPersona bot = botSwarm.get(ThreadLocalRandom.current().nextInt(botSwarm.size()));
 
-                                BigDecimal minIncrement = BidIncrementCalculator.getIncrement(target.currentPrice());
-                                double multiplier = 1.0 + ThreadLocalRandom.current().nextInt(3);
+                    BigDecimal minIncrement = BidIncrementCalculator.getIncrement(target.currentPrice());
+                    double multiplier = 1.0 + ThreadLocalRandom.current().nextInt(3);
 
-                                BigDecimal bidAmount = target.currentPrice()
-                                        .add(minIncrement.multiply(BigDecimal.valueOf(multiplier)))
-                                        .setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal bidAmount = target.currentPrice()
+                            .add(minIncrement.multiply(BigDecimal.valueOf(multiplier)))
+                            .setScale(2, RoundingMode.HALF_UP);
 
-                                return auctionService.placeMaxBid(
-                                                target.id(),
-                                                bot.bidderId(),
-                                                bidAmount,
-                                                bot.ipAddress(),
-                                                bot.userAgent(),
-                                                bot.baseReactionTimeMs()
-                                        )
-                                        // 4. Log silent failures to track collisions and rate-limits
-                                        .doOnError(e -> log.debug("⚠️ Bot bid failed: {}", e.getMessage()))
-                                        .onErrorResume(_ -> Mono.empty());
-                            });
+                    return auctionService.placeMaxBid(
+                                    target.id(),
+                                    bot.bidderId(),
+                                    bidAmount,
+                                    bot.ipAddress(),
+                                    bot.userAgent(),
+                                    bot.baseReactionTimeMs()
+                            )
+                            .doOnError(e -> log.debug("⚠️ Bot bid failed: {}", e.getMessage()))
+                            .onErrorResume(_ -> Mono.empty());
                 }).then();
     }
 }
