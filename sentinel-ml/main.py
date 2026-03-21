@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Optional
 from catboost import CatBoostClassifier
-import pandas as pd
 
 app = FastAPI(title="Sentinel ML Service")
 
@@ -28,27 +27,30 @@ def predict_fraud_batch(bids: List[BidRequest]):
     if not bids:
         return []
 
-    data = pd.DataFrame([bid.model_dump() for bid in bids])
-
-    expected_order = [
-        "bid_amount", "ip_address", "user_agent",
-        "reaction_time_ms", "bid_count_last_min", "is_new_ip"
+    features = [
+        [
+            bid.bid_amount,
+            bid.ip_address,
+            bid.user_agent,
+            bid.reaction_time_ms,
+            bid.bid_count_last_min,
+            bid.is_new_ip
+        ]
+        for bid in bids
     ]
-    features = data[expected_order]
 
     probs = model.predict_proba(features)[:, 1]
-    preds = model.predict(features)
+    predictions = model.predict(features)
 
     results = []
     for i in range(len(bids)):
         results.append(FraudCheckResponse(
             id=bids[i].id,
             fraud_probability=round(float(probs[i]), 4),
-            is_fraud=bool(preds[i])
+            is_fraud=bool(predictions[i])
         ))
 
     return results
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

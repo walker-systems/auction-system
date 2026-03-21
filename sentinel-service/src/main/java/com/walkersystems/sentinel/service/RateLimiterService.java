@@ -36,10 +36,9 @@ public class RateLimiterService {
         List<String> keys = List.of(key);                                     // KEYS[1]
         String rateArg = String.valueOf(tokenRefillRate);                     // ARGV[1]
         String capacityArg = String.valueOf(tokenCapacity);                   // ARGV[2]
-        String nowArg = String.valueOf(Instant.now().getEpochSecond());       // ARGV[3]
-        String requestedArg = String.valueOf(tokensRequested);                // ARGV[4]
+        String requestedArg = String.valueOf(tokensRequested);                // ARGV[3]
 
-        List<String> args = List.of(rateArg, capacityArg, nowArg, requestedArg);
+        List<String> args = List.of(rateArg, capacityArg, requestedArg);
 
         return redisTemplate.execute(tokenBucketScript, keys, args)
                 .next()
@@ -47,5 +46,4 @@ public class RateLimiterService {
                     Long allowed = (Long) result.getFirst();
                     return allowed == 1L;
                 });
-    }
-}
+    }}
