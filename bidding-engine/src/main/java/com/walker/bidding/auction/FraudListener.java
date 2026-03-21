@@ -1,12 +1,19 @@
 package com.walker.bidding.auction;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
+import org.springframework.data.redis.connection.stream.Consumer;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.ReadOffset;
+import org.springframework.data.redis.connection.stream.StreamOffset;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.stream.StreamReceiver;
 import org.springframework.stereotype.Service;
+import jakarta.annotation.PostConstruct;
 import reactor.core.publisher.Mono;
+
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -14,25 +21,43 @@ import reactor.core.publisher.Mono;
 public class FraudListener {
 
     private final ReactiveRedisTemplate<String, String> redisTemplate;
+    private final ReactiveRedisConnectionFactory connectionFactory;
     private final AuctionService auctionService;
 
     @PostConstruct
-    public void listenForFraud() {
-        log.info("🛡️ Bidding Engine listening for fraud alerts on 'auction:fraud'...");
+    public void init() {
+        log.info("🛡️ Bidding Engine listening for reliable fraud alerts on 'stream:auction:fraud'...");
 
-        redisTemplate.listenTo(ChannelTopic.of("auction:fraud"))
-                .map(message -> message.getMessage().split(":"))
-                .filter(parts -> parts.length == 2)
-                .flatMap(parts -> {
-                    String auctionId = parts[0];
-                    String username = parts[1];
+        redisTemplate.opsForStream()
+                .createGroup("stream:auction:fraud", ReadOffset.from("0"), "engine-group")
+                .onErrorResume(e -> Mono.empty())
+                .subscribe();
 
-                    log.warn("🚨 AI SENTINEL ALERT: Bot '{}' has been banned! Reverting price on {}...", username, auctionId);
+        StreamReceiver.StreamReceiverOptions<String, MapRecord<String, String, String>> options =
+                StreamReceiver.StreamReceiverOptions.builder()
+                        .pollTimeout(Duration.ofMillis(100))
+                        .build();
 
-                    return auctionService.revertBid(auctionId, username)
-                            .doOnSuccess(_ -> log.info("✅ Revert successfully committed for {}...", auctionId))
-                            .doOnError(err -> log.error("Failed to revert bid: ", err))
-                            .onErrorResume(_ -> Mono.empty());
+        StreamReceiver<String, MapRecord<String, String, String>> receiver =
+                StreamReceiver.create(connectionFactory, options);
+
+        receiver.receiveAutoAck(
+                        Consumer.from("engine-group", "engine-instance-1"),
+                        StreamOffset.create("stream:auction:fraud", ReadOffset.lastConsumed())
+                )
+                .flatMap(record -> {
+                    String payload = record.getValue().get("payload");
+                    if (payload != null) {
+                        String[] parts = payload.split(":");
+                        if (parts.length == 2) {
+                            String auctionId = parts[0];
+                            String fraudUser = parts[1];
+                            log.warn("🚨 Fraud Alert received for User: {}. Reverting bid on Auction: {}", fraudUser, auctionId);
+                            return auctionService.revertBid(auctionId, fraudUser);
+                        }
+                    }
+                    return Mono.empty();
                 })
                 .subscribe();
-    }}
+    }
+}

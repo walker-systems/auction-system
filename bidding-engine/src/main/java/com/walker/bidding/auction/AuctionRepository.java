@@ -86,9 +86,20 @@ public class AuctionRepository {
     }
 
     public Mono<Long> publishUpdate(Auction auction) {
-        return auctionTemplate.convertAndSend(CHANNEL_PREFIX_UPDATES + auction.id(), auction);
+        return auctionTemplate.convertAndSend(CHANNEL_PREFIX_UPDATES + auction.id(), auction)
+                .then(Mono.defer(() -> {
+                    try {
+                        return stringTemplate.opsForStream().add(
+                                "stream:auction:updates",
+                                java.util.Map.of("auction", objectMapper.writeValueAsString(auction))
+                        );
+                    } catch (Exception e) {
+                        log.error("Failed to serialize auction for stream", e);
+                        return Mono.empty();
+                    }
+                }))
+                .thenReturn(1L);
     }
-
     public Flux<Auction> observeAuctionUpdates(String auctionId) {
         return auctionTemplate.listenTo(ChannelTopic.of(CHANNEL_PREFIX_UPDATES + auctionId))
                 .map(Message::getMessage);
