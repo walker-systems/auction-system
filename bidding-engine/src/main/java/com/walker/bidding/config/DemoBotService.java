@@ -6,6 +6,7 @@ import com.walker.bidding.auction.Auction;
 import com.walker.bidding.auction.AuctionRepository;
 import com.walker.bidding.auction.AuctionService;
 import com.walker.bidding.auction.BidIncrementCalculator;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class DemoBotService {
 
     private final AuctionService auctionService;
     private final AuctionRepository auctionRepository;
+    private final MeterRegistry meterRegistry;
     private Disposable botTask;
     private Disposable autoShutoffTask;
 
@@ -115,8 +117,11 @@ public class DemoBotService {
                                     bot.userAgent(),
                                     bot.baseReactionTimeMs()
                             )
-                            .doOnError(e -> log.debug("⚠️ Bot bid failed: {}", e.getMessage()))
-                            .onErrorResume(_ -> Mono.empty());
-                }).then();
+                            .doOnSuccess(_ -> meterRegistry.counter("engine.bids.success").increment())
+                            .doOnError(e -> {
+                                log.debug("⚠️ Bot bid failed: {}", e.getMessage());
+                                meterRegistry.counter("engine.bids.rejected").increment();
+                            })
+                            .onErrorResume(_ -> Mono.empty());                }).then();
     }
 }
