@@ -20,7 +20,7 @@ import java.math.BigDecimal;
 @Repository
 @Slf4j
 public class AuctionRepository {
-    
+
     private static final String KEY_PREFIX_AUCTION = "auctions:";
     private static final String KEY_SUFFIX_MAX_BIDS = ":max_bids";
 
@@ -32,8 +32,8 @@ public class AuctionRepository {
     // Templates defined in config/RedisConfig.java are injected by Spring
     private final ReactiveRedisTemplate<String, Auction> auctionTemplate;
     private final ReactiveRedisTemplate<String, String> stringTemplate;
-    
-    private final DefaultRedisScript<Boolean> updateAuctionLua;
+
+    private final DefaultRedisScript<Long> updateAuctionLua;
     private final DefaultRedisScript<String> revertBidLua;
 
     // Manual constructor necessary to load Lua scripts (can't use Lombok here).
@@ -44,7 +44,7 @@ public class AuctionRepository {
 
         this.updateAuctionLua = new DefaultRedisScript<>();
         this.updateAuctionLua.setLocation(new ClassPathResource("scripts/update_auction.lua"));
-        this.updateAuctionLua.setResultType(Boolean.class);
+        this.updateAuctionLua.setResultType(Long.class);
 
         this.revertBidLua = new DefaultRedisScript<>();
         this.revertBidLua.setLocation(new ClassPathResource("scripts/revert_bid.lua"));
@@ -60,6 +60,7 @@ public class AuctionRepository {
         return auctionTemplate.opsForValue()
                 .set(addPrefix(auction.id()), auction)
                 .then(updateActiveAuctionIndex(auction))
+                .then(stringTemplate.opsForZSet().add("auction:expirations", auction.id(), (double) auction.endsAt().toEpochMilli()))
                 .thenReturn(auction);
     }
 
@@ -67,34 +68,41 @@ public class AuctionRepository {
         return auctionTemplate.opsForValue().get(addPrefix(id));
     }
 
-    public Mono<Boolean> updateAuction(Auction proposedAuction) {
-        return auctionTemplate.execute(
-                updateAuctionLua,
+    public Mono<Boolean> updateAuction(Auction updatedAuction) {
+        String auctionKey = addPrefix(updatedAuction.id());
 
-                // KEYS[1] = "auctions:auc-123"
-                // KEYS[2] = "active_auctions"
-                List.of(addPrefix(proposedAuction.id()), KEY_ACTIVE_AUCTIONS),
+        String zsetKey = auctionKey + ":bids";
 
-                // ARGV[1]  = JSON string representing auction object.
-                List.of(proposedAuction)
-        ).next();
+        List<String> keys = List.of(auctionKey, zsetKey);
+
+        long expectedVersion = updatedAuction.version() - 1;
+
+        List<String> args = List.of(
+                String.valueOf(updatedAuction.currentPrice()),
+                updatedAuction.highBidder(),
+                String.valueOf(expectedVersion)
+        );
+
+        return stringTemplate.execute(updateAuctionLua, keys, args)
+                .next()
+                .map(newVersion -> {
+                    // If the script returns -1, the version expected didn't match (collision)
+                    return newVersion != -1L;
+                });
     }
 
     public Mono<Long> publishUpdate(Auction auction) {
-
         // Publishes to Channel: "auction:updates:auc-123"
         return auctionTemplate.convertAndSend(CHANNEL_PREFIX_UPDATES + auction.id(), auction);
     }
 
     public Flux<Auction> observeAuctionUpdates(String auctionId) {
-
         // Subscribes to Channel: "auction:updates:auc-123"
         return auctionTemplate.listenTo(ChannelTopic.of(CHANNEL_PREFIX_UPDATES + auctionId))
                 .map(Message::getMessage);
     }
 
     public Flux<Auction> findAll() {
-
         // Scans Set Key: "active_auctions"
         return stringTemplate.opsForSet()
                 .members(KEY_ACTIVE_AUCTIONS)
@@ -118,11 +126,13 @@ public class AuctionRepository {
 
                 // Deletes empty collection "banned_users"
                 .then(stringTemplate.delete(KEY_BANNED_USERS))
+
+                // Clear expiration index
+                .then(stringTemplate.delete("auction:expirations"))
                 .then();
     }
 
     private Mono<Long> updateActiveAuctionIndex(Auction auction) {
-
         // Add to active auctions index if it's currently active...
         if (auction.active()) {
             return stringTemplate.opsForSet().add(KEY_ACTIVE_AUCTIONS, auction.id());

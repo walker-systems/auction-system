@@ -8,6 +8,7 @@ import io.micrometer.core.instrument.distribution.ValueAtPercentile;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Range;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -202,6 +203,7 @@ public class AuctionService {
                     .doFinally(_ -> sample.stop(proxyBidTimer));
         });
     }
+
     public Flux<Auction> streamAuctionUpdates(String auctionId) {
         return auctionRepository.observeAuctionUpdates(auctionId).sample(Duration.ofMillis(100));
     }
@@ -221,9 +223,17 @@ public class AuctionService {
                 .then();
     }
 
+    // NEW: Highly efficient O(log N) lookup instead of O(N) JVM memory scan
+    public Flux<String> getExpiredAuctionIds() {
+        double now = (double) Instant.now().toEpochMilli();
+        return redisTemplate.opsForZSet()
+                .rangeByScore("auction:expirations", Range.closed(0.0, now));
+    }
+
     @Scheduled(fixedRate = 600000)
     public void sweepExpiredAuctions() {
-        auctionRepository.findAll()
+        getExpiredAuctionIds()
+                .flatMap(auctionRepository::findById)
                 .filter(Auction::active)
                 .filter(a -> a.endsAt().isBefore(Instant.now()))
                 .flatMap(auction -> {
@@ -232,7 +242,12 @@ public class AuctionService {
                             auction.version() + 1, auction.ipAddress(), auction.userAgent(),
                             auction.reactionTimeMs(), auction.bidCountLastMin(), auction.isNewIp());
                     return auctionRepository.save(closedAuction)
-                            .then(auctionRepository.publishUpdate(closedAuction));
-                }).subscribe();
+                            .then(redisTemplate.opsForZSet().remove("auction:expirations", auction.id())) // Clean up the index
+                            .then(auctionRepository.publishUpdate(closedAuction))
+                            .thenReturn(closedAuction);
+                }).subscribe(
+                        auction -> log.info("Successfully closed expired auction: {}", auction.id()),
+                        err -> log.error("Error sweeping auctions", err)
+                );
     }
 }
