@@ -1,5 +1,7 @@
 package com.walker.bidding.auction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.connection.ReactiveSubscription.Message;
@@ -11,15 +13,15 @@ import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-import java.util.List;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Repository
 @Slf4j
 public class AuctionRepository {
+
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     private static final String KEY_PREFIX_AUCTION = "auctions:";
     private static final String KEY_SUFFIX_MAX_BIDS = ":max_bids";
@@ -29,14 +31,12 @@ public class AuctionRepository {
 
     private static final String CHANNEL_PREFIX_UPDATES = "auction:updates:";
 
-    // Templates defined in config/RedisConfig.java are injected by Spring
     private final ReactiveRedisTemplate<String, Auction> auctionTemplate;
     private final ReactiveRedisTemplate<String, String> stringTemplate;
 
     private final DefaultRedisScript<Long> updateAuctionLua;
     private final DefaultRedisScript<String> revertBidLua;
 
-    // Manual constructor necessary to load Lua scripts (can't use Lombok here).
     public AuctionRepository(ReactiveRedisTemplate<String, Auction> auctionTemplate,
                              ReactiveRedisTemplate<String, String> stringTemplate) {
         this.auctionTemplate = auctionTemplate;
@@ -51,7 +51,6 @@ public class AuctionRepository {
         this.revertBidLua.setResultType(String.class);
     }
 
-    // Example = "auctions:auc-123"
     private String addPrefix(String id) {
         return KEY_PREFIX_AUCTION + id;
     }
@@ -70,11 +69,9 @@ public class AuctionRepository {
 
     public Mono<Boolean> updateAuction(Auction updatedAuction) {
         String auctionKey = addPrefix(updatedAuction.id());
-
         String zsetKey = auctionKey + ":bids";
 
         List<String> keys = List.of(auctionKey, zsetKey);
-
         long expectedVersion = updatedAuction.version() - 1;
 
         List<String> args = List.of(
@@ -85,25 +82,30 @@ public class AuctionRepository {
 
         return stringTemplate.execute(updateAuctionLua, keys, args)
                 .next()
-                .map(newVersion -> {
-                    // If the script returns -1, the version expected didn't match (collision)
-                    return newVersion != -1L;
-                });
+                .map(newVersion -> newVersion != -1L);
     }
 
     public Mono<Long> publishUpdate(Auction auction) {
-        // Publishes to Channel: "auction:updates:auc-123"
-        return auctionTemplate.convertAndSend(CHANNEL_PREFIX_UPDATES + auction.id(), auction);
+        return auctionTemplate.convertAndSend(CHANNEL_PREFIX_UPDATES + auction.id(), auction)
+                .then(Mono.defer(() -> {
+                    try {
+                        return stringTemplate.opsForStream().add(
+                                "stream:auction:updates",
+                                java.util.Map.of("auction", objectMapper.writeValueAsString(auction))
+                        );
+                    } catch (Exception e) {
+                        log.error("Failed to serialize auction for stream", e);
+                        return Mono.empty();
+                    }
+                }))
+                .thenReturn(1L);
     }
-
     public Flux<Auction> observeAuctionUpdates(String auctionId) {
-        // Subscribes to Channel: "auction:updates:auc-123"
         return auctionTemplate.listenTo(ChannelTopic.of(CHANNEL_PREFIX_UPDATES + auctionId))
                 .map(Message::getMessage);
     }
 
     public Flux<Auction> findAll() {
-        // Scans Set Key: "active_auctions"
         return stringTemplate.opsForSet()
                 .members(KEY_ACTIVE_AUCTIONS)
                 .flatMap(this::findById);
@@ -112,7 +114,6 @@ public class AuctionRepository {
     public Mono<Void> deleteAll() {
         log.info("🗑️ Sweeping the database clean via non-blocking SCAN...");
 
-        // Matches Pattern: "auctions:*" (e.g., "auctions:auc-1", "auctions:auc-2")
         ScanOptions options = ScanOptions.scanOptions()
                 .match("auctions:*")
                 .count(100)
@@ -120,31 +121,20 @@ public class AuctionRepository {
 
         return stringTemplate.scan(options)
                 .flatMap(auctionTemplate::delete)
-
-                // Deletes empty collection "active_auctions"
                 .then(stringTemplate.delete(KEY_ACTIVE_AUCTIONS))
-
-                // Deletes empty collection "banned_users"
                 .then(stringTemplate.delete(KEY_BANNED_USERS))
-
-                // Clear expiration index
                 .then(stringTemplate.delete("auction:expirations"))
                 .then();
     }
 
     private Mono<Long> updateActiveAuctionIndex(Auction auction) {
-        // Add to active auctions index if it's currently active...
         if (auction.active()) {
             return stringTemplate.opsForSet().add(KEY_ACTIVE_AUCTIONS, auction.id());
         }
-        // ...otherwise, remove it from active auctions index.
         return stringTemplate.opsForSet().remove(KEY_ACTIVE_AUCTIONS, auction.id());
     }
 
     public Mono<Auction> revertBid(String auctionId, String fraudUser, BigDecimal fallbackBasePrice) {
-        // Passes to Lua:
-        // KEYS[1] = "auctions:auc-123"
-        // KEYS[2] = "auctions:auc-123:max_bids"
         return stringTemplate.execute(
                 revertBidLua,
                 List.of(addPrefix(auctionId), addPrefix(auctionId) + KEY_SUFFIX_MAX_BIDS),
@@ -155,9 +145,7 @@ public class AuctionRepository {
                 return Mono.error(new IllegalArgumentException(errMsg));
             }
             try {
-                ObjectMapper mapper = new ObjectMapper();
-                mapper.registerModule(new JavaTimeModule());
-                return Mono.just(mapper.readValue(result, Auction.class));
+                return Mono.just(objectMapper.readValue(result, Auction.class));
             } catch (Exception e) {
                 return Mono.error(new RuntimeException("Failed to deserialize rollback result", e));
             }
@@ -165,7 +153,6 @@ public class AuctionRepository {
     }
 
     public Flux<Auction> observeAllAuctionUpdates() {
-        // Listens to "auction:updates:*"
         return auctionTemplate.listenTo(PatternTopic.of(CHANNEL_PREFIX_UPDATES + "*"))
                 .map(Message::getMessage);
     }
