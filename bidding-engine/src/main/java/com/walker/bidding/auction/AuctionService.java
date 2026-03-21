@@ -27,6 +27,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -275,6 +276,51 @@ public class AuctionService {
                 }).subscribe(
                         auction -> log.info("Successfully closed expired auction: {}", auction.id()),
                         err -> log.error("Error sweeping auctions", err)
+                );
+    }
+
+    @Scheduled(initialDelay = 60000, fixedRate = 300000)
+    public void restockLowInventory() {
+        redisTemplate.opsForSet().size("active_auctions")
+                .flatMap(activeCount -> {
+                    // If there are less than 50 active auctions left, inject 200 fresh ones
+                    if (activeCount < 50) {
+                        log.info("📉 Low inventory detected ({} active). Restocking 200 fresh auctions...", activeCount);
+
+                        return Flux.range(1, 200)
+                                .flatMap(i -> {
+                                    // Generate restock id to avoid collisions with older auctions
+                                    String newId = "auc-restock-" + System.currentTimeMillis() + "-" + i;
+
+                                    // Grab a random starting price from cached catalog (or default to $10)
+                                    BigDecimal startPrice = startingPrices.values().stream()
+                                            .skip(ThreadLocalRandom.current().nextInt(!startingPrices.isEmpty() ? startingPrices.size() : 1))
+                                            .findFirst()
+                                            .orElse(new BigDecimal("10.00"));
+
+                                    // Set expiration between 15 minutes and 2 hours from now
+                                    long offsetSeconds = ThreadLocalRandom.current().nextLong(900, 7200);
+                                    Instant endsAt = Instant.now().plusSeconds(offsetSeconds);
+
+                                    Auction freshAuction = new Auction(
+                                            newId, "item-restock-" + i, startPrice, "System", endsAt,
+                                            true, 0, null, null, 0, 0, 0
+                                    );
+
+                                    return auctionRepository.save(freshAuction)
+                                            .then(auctionRepository.publishUpdate(freshAuction));
+                                }, 10) // Process 10 at a time to be gentle on the droplet
+                                .then(Mono.just(true));
+                    }
+                    return Mono.just(false);
+                })
+                .subscribe(
+                        restocked -> {
+                            if (restocked) {
+                                log.info("✅ Restock complete. The ecosystem lives on.");
+                            }
+                        },
+                        err -> log.error("❌ Error restocking auctions", err)
                 );
     }
 }
