@@ -1,5 +1,8 @@
 package com.walker.bidding.auction;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.walker.bidding.exception.BannedUserException;
 import com.walker.bidding.exception.ConcurrentBidException;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -8,6 +11,7 @@ import io.micrometer.core.instrument.distribution.ValueAtPercentile;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Range;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,9 +20,13 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -29,6 +37,9 @@ public class AuctionService {
     private final AuctionRepository auctionRepository;
     private final ReactiveRedisTemplate<String, String> redisTemplate;
     private final MeterRegistry meterRegistry;
+
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    private final Map<String, BigDecimal> startingPrices = new ConcurrentHashMap<>();
 
     private Timer proxyBidTimer;
     private Timer standardBidTimer;
@@ -48,6 +59,21 @@ public class AuctionService {
                 .publishPercentiles(0.99)
                 .publishPercentileHistogram()
                 .register(meterRegistry);
+
+        loadStartingPrices();
+    }
+
+    private void loadStartingPrices() {
+        try {
+            InputStream is = new ClassPathResource("auctions_catalog.json").getInputStream();
+            List<Auction> catalog = objectMapper.readValue(is, new TypeReference<>() {});
+            for (Auction auction : catalog) {
+                startingPrices.put(auction.id(), auction.currentPrice());
+            }
+            log.info("💰 Loaded {} starting prices from catalog for rollback safety.", startingPrices.size());
+        } catch (Exception e) {
+            log.error("Failed to load auctions_catalog.json for starting prices", e);
+        }
     }
 
     public double getP99LatencyMs() {
@@ -89,7 +115,7 @@ public class AuctionService {
 
                                     Auction updatedAuction = new Auction(
                                             auction.id(), auction.itemId(), bidAmount, bidder,
-                                            auction.endsAt(), true, auction.version() + 1, // critical version increment
+                                            auction.endsAt(), true, auction.version() + 1,
                                             ipAddress, userAgent, reactionTimeMs,
                                             (reactionTimeMs < 100) ? 65 : 1, (reactionTimeMs < 100) ? 1 : 0
                                     );
@@ -218,12 +244,13 @@ public class AuctionService {
     }
 
     public Mono<Void> revertBid(String auctionId, String fraudUser) {
-        return auctionRepository.revertBid(auctionId, fraudUser, new BigDecimal("10.00"))
+        BigDecimal trueStartingPrice = startingPrices.getOrDefault(auctionId, new BigDecimal("10.00"));
+
+        return auctionRepository.revertBid(auctionId, fraudUser, trueStartingPrice)
                 .flatMap(auctionRepository::publishUpdate)
                 .then();
     }
 
-    // NEW: Highly efficient O(log N) lookup instead of O(N) JVM memory scan
     public Flux<String> getExpiredAuctionIds() {
         double now = (double) Instant.now().toEpochMilli();
         return redisTemplate.opsForZSet()
@@ -242,7 +269,7 @@ public class AuctionService {
                             auction.version() + 1, auction.ipAddress(), auction.userAgent(),
                             auction.reactionTimeMs(), auction.bidCountLastMin(), auction.isNewIp());
                     return auctionRepository.save(closedAuction)
-                            .then(redisTemplate.opsForZSet().remove("auction:expirations", auction.id())) // Clean up the index
+                            .then(redisTemplate.opsForZSet().remove("auction:expirations", auction.id()))
                             .then(auctionRepository.publishUpdate(closedAuction))
                             .thenReturn(closedAuction);
                 }).subscribe(
