@@ -63,4 +63,26 @@ public class RateLimiterTest {
                 .expectNext(false)
                 .verifyComplete();
     }
+
+    @Test
+    public void testThunderingHerd_ExactlyCapacityAllowed() {
+        String testUser = "thundering_herd_user";
+        int capacity = 10;
+        int refillRate = 1;
+
+        // Fire 50 requests concurrently
+        Long allowedCount = reactor.core.publisher.Flux.range(1, 50)
+                .flatMap(i -> rateLimiterService.isAllowed(testUser, capacity, refillRate, 1))
+                .filter(allowed -> allowed) // Keep only the requests that returned true
+                .count()
+                .block();
+
+        // No matter the concurrency, the Lua script MUST restrict success to exactly the bucket capacity
+        assert allowedCount != null;
+        org.junit.jupiter.api.Assertions.assertEquals(
+                capacity,
+                allowedCount.intValue(),
+                "Exactly 10 requests should be allowed out of 50 concurrent ones"
+        );
+    }
 }
