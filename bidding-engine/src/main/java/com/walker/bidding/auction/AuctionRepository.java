@@ -51,27 +51,27 @@ public class AuctionRepository {
         this.revertBidLua.setResultType(String.class);
     }
 
-    private String addPrefix(String id) {
+    private String buildAuctionKey(String id) {
         return KEY_PREFIX_AUCTION + id;
     }
 
     public Mono<Auction> save(Auction auction) {
         return auctionTemplate.opsForValue()
-                .set(addPrefix(auction.id()), auction)
-                .then(updateActiveAuctionIndex(auction))
+                .set(buildAuctionKey(auction.id()), auction)
+                .then(addToActiveAuctions(auction))
                 .then(stringTemplate.opsForZSet().add("auction:expirations", auction.id(), (double) auction.endsAt().toEpochMilli()))
                 .thenReturn(auction);
     }
 
     public Mono<Auction> findById(String id) {
-        return auctionTemplate.opsForValue().get(addPrefix(id));
+        return auctionTemplate.opsForValue().get(buildAuctionKey(id));
     }
 
     public Mono<Boolean> updateAuction(Auction updatedAuction) {
-        String auctionKey = addPrefix(updatedAuction.id());
-        String zsetKey = auctionKey + ":bids";
+        String auctionKey = buildAuctionKey(updatedAuction.id());
+        String zSetKey = auctionKey + ":bids";
 
-        List<String> keys = List.of(auctionKey, zsetKey);
+        List<String> keys = List.of(auctionKey, zSetKey);
         long expectedVersion = updatedAuction.version() - 1;
 
         List<String> args = List.of(
@@ -100,6 +100,7 @@ public class AuctionRepository {
                 }))
                 .thenReturn(1L);
     }
+
     public Flux<Auction> observeAuctionUpdates(String auctionId) {
         return auctionTemplate.listenTo(ChannelTopic.of(CHANNEL_PREFIX_UPDATES + auctionId))
                 .map(Message::getMessage);
@@ -127,7 +128,7 @@ public class AuctionRepository {
                 .then();
     }
 
-    private Mono<Long> updateActiveAuctionIndex(Auction auction) {
+    private Mono<Long> addToActiveAuctions(Auction auction) {
         if (auction.active()) {
             return stringTemplate.opsForSet().add(KEY_ACTIVE_AUCTIONS, auction.id());
         }
@@ -137,7 +138,7 @@ public class AuctionRepository {
     public Mono<Auction> revertBid(String auctionId, String fraudUser, BigDecimal fallbackBasePrice) {
         return stringTemplate.execute(
                 revertBidLua,
-                List.of(addPrefix(auctionId), addPrefix(auctionId) + KEY_SUFFIX_MAX_BIDS),
+                List.of(buildAuctionKey(auctionId), buildAuctionKey(auctionId) + KEY_SUFFIX_MAX_BIDS),
                 List.of(fraudUser, fallbackBasePrice.toString())
         ).next().flatMap(result -> {
             if (result.startsWith("{\"error\"")) {

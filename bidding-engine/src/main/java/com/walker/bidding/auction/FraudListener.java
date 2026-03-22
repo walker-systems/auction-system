@@ -30,7 +30,7 @@ public class FraudListener {
 
         redisTemplate.opsForStream()
                 .createGroup("stream:auction:fraud", ReadOffset.from("0"), "engine-group")
-                .onErrorResume(e -> Mono.empty())
+                .onErrorResume(_ -> Mono.empty())
                 .subscribe();
 
         StreamReceiver.StreamReceiverOptions<String, MapRecord<String, String, String>> options =

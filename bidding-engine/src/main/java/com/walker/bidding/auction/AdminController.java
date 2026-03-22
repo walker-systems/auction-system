@@ -14,6 +14,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -55,14 +56,14 @@ public class AdminController {
                 .map(log -> ServerSentEvent.<String>builder().data(log).build());
 
         Flux<ServerSentEvent<String>> keepAlive = Flux.interval(Duration.ofMillis(500))
-                .map(tick -> ServerSentEvent.<String>builder().data("HEARTBEAT").build());
+                .map(_ -> ServerSentEvent.<String>builder().data("HEARTBEAT").build());
 
         return Flux.merge(logs, keepAlive);
     }
 
     @GetMapping("/telemetry")
     public Mono<java.util.Map<String, Object>> getTelemetry() {
-        return Mono.just(java.util.Map.of(
+        return Mono.just(Map.of(
                 "p99LatencyMs", auctionService.getP99LatencyMs()
         ));
     }
