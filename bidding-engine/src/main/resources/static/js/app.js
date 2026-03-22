@@ -18,7 +18,17 @@ let sortAsc = true;
 
 document.addEventListener('DOMContentLoaded', () => {
     localStorage.removeItem('logsUnlocked');
-    loadStorefront();
+
+    if (!sessionStorage.getItem('system_just_reset')) {
+        console.log("Initial load: Auto-triggering system reset...");
+        sessionStorage.setItem('system_just_reset', 'true');
+        resetSystem();
+        return;
+    } else {
+        console.log("Waking up from reset: Loading storefront...");
+        sessionStorage.removeItem('system_just_reset');
+        loadStorefront();
+    }
 
     const ctx = document.getElementById('telemetryChart');
     if (ctx) {
