@@ -121,21 +121,47 @@ function resetSystem() {
 }
 
 function placeBid(auctionId) {
-    const username = document.getElementById(`username-${auctionId}`).value;
+    const usernameInput = document.getElementById(`username-${auctionId}`);
+    const username = usernameInput ? usernameInput.value.trim() : "You";
+
     const bidInput = document.getElementById(`bid-amount-${auctionId}`);
     const amount = parseFloat(bidInput.value);
 
+    const auctionState = activeAuctions[auctionId];
+    if (!auctionState) {
+        console.error("Auction state not found in activeAuctions!");
+        return;
+    }
+
+    const requiredMinBid = parseFloat(calculateNextBid(auctionState.currentPrice));
+
     bidInput.value = calculateNextBid(amount);
 
-    const payload = {
-        bidderId: username,
-        maxBid: amount,
-        telemetry: {
-            ipAddress: "127.0.0.1",
-            userAgent: navigator.userAgent,
-            reactionTimeMs: Math.floor(Math.random() * (300 - 100 + 1) + 100)
-        }
+    const reactionTime = Math.floor(Math.random() * (300 - 100 + 1) + 100);
+
+    let endpoint = `/api/auctions/${auctionId}/bids`;
+    let payload = {
+        bidder: username,
+        amount: amount,
+        reactionTimeMs: reactionTime
     };
+
+    if (amount > requiredMinBid) {
+        endpoint = `/api/auctions/${auctionId}/max-bids`;
+
+        payload = {
+            bidderId: username,
+            maxBid: amount,
+            telemetry: {
+                ipAddress: "127.0.0.1",
+                userAgent: navigator.userAgent,
+                reactionTimeMs: reactionTime
+            }
+        };
+        console.log(`[ROUTER] Routing to MAX bid endpoint. Amount: $${amount} > Min: $${requiredMinBid}`);
+    } else {
+        console.log(`[ROUTER] Routing to STANDARD bid endpoint. Amount: $${amount} == Min: $${requiredMinBid}`);
+    }
 
     const btn = document.getElementById(`btn-${auctionId}`);
     if (btn) {
@@ -147,7 +173,7 @@ function placeBid(auctionId) {
         }, 150);
     }
 
-    fetch(`/api/auctions/${auctionId}/max-bids`, {
+    fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -155,7 +181,7 @@ function placeBid(auctionId) {
         if (!response.ok) {
             const errorData = await response.json();
             const errorMessage = errorData.detail || errorData.error || errorData.message || "Outbid!";
-            showCardToast(auctionId, errorMessage, "bg-red-600");
+            showCardToast(auctionId, errorMessage, "bg-red-600 text-white");
 
             const minBidMatch = errorMessage.match(/at least \$([0-9]+\.?[0-9]*)/);
             if (minBidMatch && minBidMatch[1] && bidInput) {
@@ -172,10 +198,10 @@ function placeBid(auctionId) {
                 sortAndRender();
             }
 
-            showCardToast(auctionId, "ACCEPTED", "border-green-500 text-green-400");
+            showCardToast(auctionId, "ACCEPTED", "bg-[#0a2e15] border border-green-500 text-green-400");
         }
-    }).catch(err => {
-        showCardToast(auctionId, errorMessage, "border-gray-500 text-gray-400");
+    }).catch(() => {
+        showCardToast(auctionId, "Network Error", "bg-gray-800 border border-gray-500 text-gray-400");
     });
 }
 

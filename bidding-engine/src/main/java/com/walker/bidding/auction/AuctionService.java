@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import org.springframework.data.domain.Range;
 
 @Service
 @RequiredArgsConstructor
@@ -66,8 +67,8 @@ public class AuctionService {
 
     private void loadStartingPrices() {
         try {
-            InputStream is = new ClassPathResource("auctions_catalog.json").getInputStream();
-            List<Auction> catalog = objectMapper.readValue(is, new TypeReference<>() {});
+            InputStream iS = new ClassPathResource("auctions_catalog.json").getInputStream();
+            List<Auction> catalog = objectMapper.readValue(iS, new TypeReference<>() {});
             for (Auction auction : catalog) {
                 startingPrices.put(auction.id(), auction.currentPrice());
             }
@@ -172,7 +173,7 @@ public class AuctionService {
                                                 }
 
                                                 return redisTemplate.opsForZSet().add(maxBidsKey, bidderId, maxBid.doubleValue())
-                                                        .thenMany(redisTemplate.opsForZSet().reverseRangeWithScores(maxBidsKey, org.springframework.data.domain.Range.closed(0L, 1L)))
+                                                        .thenMany(redisTemplate.opsForZSet().reverseRangeWithScores(maxBidsKey, Range.closed(0L, 1L)))
                                                         .collectList()
                                                         .flatMap(top2 -> {
                                                             String highestBidder = top2.getFirst().getValue();
@@ -185,12 +186,12 @@ public class AuctionService {
                                                                 Double score1 = top2.get(1).getScore();
                                                                 BigDecimal secondMax = BigDecimal.valueOf(score1 != null ? score1 : 0.0);
                                                                 BigDecimal increment = BidIncrementCalculator.getIncrement(secondMax);
-                                                                BigDecimal incrementedSecond = secondMax.add(increment);
+                                                                BigDecimal secondMaxPlusIncrement = secondMax.add(increment);
 
-                                                                if (incrementedSecond.compareTo(highestMax) > 0) {
+                                                                if (secondMaxPlusIncrement.compareTo(highestMax) > 0) {
                                                                     newVisiblePrice = highestMax;
                                                                 } else {
-                                                                    newVisiblePrice = incrementedSecond;
+                                                                    newVisiblePrice = secondMaxPlusIncrement;
                                                                 }
                                                             }
                                                             Instant newEndsAt = auction.endsAt();
@@ -252,7 +253,7 @@ public class AuctionService {
                 .then();
     }
 
-    public Flux<String> getExpiredAuctionIds() {
+    private Flux<String> getExpiredAuctionIds() {
         double now = (double) Instant.now().toEpochMilli();
         return redisTemplate.opsForZSet()
                 .rangeByScore("auction:expirations", Range.closed(0.0, now));

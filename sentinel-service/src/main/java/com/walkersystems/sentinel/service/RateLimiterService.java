@@ -16,12 +16,12 @@ public class RateLimiterService {
 
     private final ReactiveRedisTemplate<String, String> redisTemplate;
 
-    private final RedisScript<List<?>> tokenBucketScript;
+    private final RedisScript<List<?>> tokenBucketLua;
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     public RateLimiterService(ReactiveRedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
-        this.tokenBucketScript = (RedisScript<List<?>>) (RedisScript) RedisScript.of(new ClassPathResource("scripts/token_bucket.lua"), List.class);
+        this.tokenBucketLua = (RedisScript<List<?>>) (RedisScript) RedisScript.of(new ClassPathResource("scripts/token_bucket.lua"), List.class);
     }
 
     public Mono<Boolean> isAllowed(String identifier, int tokenCapacity, int tokenRefillRate, int tokensRequested) {
@@ -33,14 +33,14 @@ public class RateLimiterService {
         }
 
         String key = "rate_limit:" + identifier;
-        List<String> keys = List.of(key);                                     // KEYS[1]
-        String rateArg = String.valueOf(tokenRefillRate);                     // ARGV[1]
-        String capacityArg = String.valueOf(tokenCapacity);                   // ARGV[2]
-        String requestedArg = String.valueOf(tokensRequested);                // ARGV[3]
+        String rateArg = String.valueOf(tokenRefillRate);
+        String capacityArg = String.valueOf(tokenCapacity);
+        String requestedArg = String.valueOf(tokensRequested);
 
+        List<String> keys = List.of(key);
         List<String> args = List.of(rateArg, capacityArg, requestedArg);
 
-        return redisTemplate.execute(tokenBucketScript, keys, args)
+        return redisTemplate.execute(tokenBucketLua, keys, args)
                 .next()
                 .map(result -> {
                     Long allowed = (Long) result.getFirst();

@@ -17,13 +17,6 @@ spring:
           max-idle: 100
           min-idle: 10
 
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY}
-      chat:
-        options:
-          model: gpt-3.5-turbo
-
   main:
     web-application-type: reactive
 

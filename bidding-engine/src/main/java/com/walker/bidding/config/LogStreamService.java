@@ -18,7 +18,7 @@ public class LogStreamService {
 
         // Internal heartbeat generator to keep the stream hot and shatter browser buffers
         Flux.interval(Duration.ofMillis(500))
-                .subscribe(tick -> sink.tryEmitNext("HEARTBEAT"));
+                .subscribe(_ -> sink.tryEmitNext("HEARTBEAT"));
     }
 
     public void pushLog(String log) {
