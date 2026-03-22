@@ -10,9 +10,6 @@ spring:
     redis:
       host: localhost
       port: 6379
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY}
 
 logging:
   level:
