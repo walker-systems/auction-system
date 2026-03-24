@@ -1,118 +1,175 @@
-# ⚡ Real-Time Bidding & Fraud Detection Platform
+<div align="center">
+  <a href="https://bidstream.dev/" target="_blank">
+    <img src="./exports/BIDSTREAM_logo_no_bg_001.png" alt="Bidstream Logo" width="600" />
+  </a>
+</div>
 
-This is a live auction platform that uses AI to catch fraudulent bids in real time. It is built with Spring Boot and Redis to handle fast, continuous data streams, instantly blocking bots without slowing down the user experience.
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/13a9dbec-5468-4c49-8461-fdde9f90fa28" alt="Bidstream Demo" style="width: 100%; border-radius: 8px; border: 1px solid #1f2937;">
+</div>
 
-## 🏗️ How It Works
+Bidstream is a reactive, high-frequency trading platform designed to solve distributed systems challenges. It demonstrates how to handle massive traffic spikes, mitigate race conditions via atomic state management, display continuously updating visuals representing real-time data, and run live machine learning fraud detection without degrading performance.
 
-Here is a high-level look at how data moves through the platform when a bid is placed:
+<br>
+
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border: 1px solid #1f2937; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);">
+  <iframe
+    src="https://www.loom.com/embed/0cd99f26a7a44051b5c202e6cfc240a9?hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true"
+    frameborder="0"
+    webkitallowfullscreen
+    mozallowfullscreen
+    allowfullscreen
+    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+  </iframe>
+</div>
+
+<p align="center"><em style="font-size: 0.9em; color: #9ca3af;">(Press play for a 3-minute technical walkthrough of the architecture and code.)</em></p>
+
+---
+
+## Architecture
+
+The ecosystem relies on an event-driven, decoupled architecture.
 
 ```mermaid
-graph LR
-    %% Define styles
-    classDef user fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff,font-weight:bold;
-    classDef core fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff,font-weight:bold;
-    classDef db fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff,font-weight:bold;
-    classDef ai fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff,font-weight:bold;
-    classDef external fill:#374151,stroke:#1f2937,stroke-width:2px,color:#fff,font-weight:bold;
+graph TD
+    %% Styling Definitions
+    classDef client fill:#1f2937,stroke:#4ade80,stroke-width:2px,color:#f3f4f6
+    classDef engine fill:#1e40af,stroke:#60a5fa,stroke-width:2px,color:#eff6ff
+    classDef redis fill:#991b1b,stroke:#f87171,stroke-width:2px,color:#fef2f2
+    classDef python fill:#065f46,stroke:#34d399,stroke-width:2px,color:#ecfdf5
 
     %% Nodes
-    User((User)):::user
-    BE[Bidding Engine]:::core
-    Redis[(Redis Pub/Sub)]:::db
-    Sentinel[Sentinel Service]:::ai
-    LLM[OpenAI]:::external
+    Client["💻 Client Browser<br/>(React / Vanilla JS)"]:::client
+    Engine["⚙️ Bidding Engine<br/>(Java Spring WebFlux)"]:::engine
+    Redis[("🗄️ Redis Cache<br/>(State / Lua / PubSub)")]:::redis
+    Sentinel["🧠 Sentinel ML<br/>(Python CatBoost)"]:::python
 
-    %% Flow
-    User -->|1. Places Bid| BE
-    BE -->|2. Saves & Broadcasts| Redis
-    Redis -->|3. Triggers Alert| Sentinel
-    Sentinel <-->|4. Checks Context| LLM
-    Sentinel -.->|5. Rejects Fraud| Redis
-    Redis -.->|6. Live UI Update| BE
-    BE -.->|7. Shows Rejection| User
+    %% Connections
+    Client -- "1. HTTP POST (Execute Bid)" --> Engine
+    Engine -- "2. Evaluate Atomic Lua Script" --> Redis
+    Engine -. "3. Async Micro-batch (WebClient)" .-> Sentinel
+    Redis -- "4. Pub/Sub (State Change Notification)" --> Engine
+    Engine -- "5. Server-Sent Events (Live Logs & Prices)" --> Client
+    Sentinel -. "6. Fraud Alert (Redis Stream)" .-> Redis
 ```
 
-### The Core Pieces
-* **The Storefront (Bidding Engine):** This is the user interface. It takes incoming bids and uses active streams to update the screen instantly for everyone watching, without them needing to refresh the page.
-* **The Broker (Redis):** This acts as the central nervous system. Instead of the storefront talking directly to the security service, they both just talk to Redis. This keeps the storefront moving fast.
-* **The Security Guard (Sentinel):** This service silently watches every bid that drops into Redis. It packages the bid's context and asks the AI if the behavior looks like a bot. If it catches fraud, it sends a kill signal back through Redis to reverse the bid on everyone's screen.
+## Key Features
 
----
+### 1. DDoS Mitigation at the Cache Layer
 
-## 🚀 Quick Start Guide
+To protect the main Java JVM from wasting CPU cycles on dead or malicious traffic, the perimeter is secured by a custom token bucket rate limiter.
 
-Follow these steps to run the platform locally on your machine.
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/a52332db-6084-45f5-b7ed-c66bea9458e5" alt="Rate Limiter Demo" style="width: 100%; border-radius: 8px; border: 1px solid #1f2937;">
+</div>
 
-### Prerequisites
-* **Docker** (must be running in the background)
-* **Java 21+**
-* **OpenAI API Key** (needed for the Sentinel to analyze bids)
+Every incoming request is evaluated in-memory within Redis. Malicious IPs attempting to flood the application are dropped instantly at the cache layer, maintaining stability for legitimate users.
 
-### 1. Get the Code
+### 2. Atomic Transactions and Race Condition Prevention
+
+In a highly concurrent system, two users bidding at the exact same millisecond can cause a double-spend or "time of check to time of use" (TOCTOU) vulnerability.
+
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/26fd5bb3-7585-4122-9561-84875e7682f3" alt="Bid Collision Demo" style="width: 100%; border-radius: 8px; border: 1px solid #1f2937;">
+</div>
+
+To solve this, the Java server does not evaluate the math. Instead, it delegates the bid to an atomic Redis Lua script. This guarantees strict consistency and optimistic locking.
+
+```mermaid
+sequenceDiagram
+    participant C as Client (User/Bot)
+    participant J as Java Service
+    participant R as Redis (Lua Script)
+
+    C->>J: POST /bid ($15.00, Expected Version: 4)
+    J->>R: EVAL update_auction.lua
+    activate R
+    note over R: Transaction Locked
+    R->>R: 1. Check if Expired (TIME)
+    R->>R: 2. Verify Current Version == 4
+    R->>R: 3. Update Price to $15.00
+    R->>R: 4. Increment Version to 5
+    R-->>J: Return Success (New Version: 5)
+    deactivate R
+    J-->>C: 200 OK (Bid Accepted)
+```
+
+### 3. Non-Blocking I/O and Real-Time Data Streaming
+
+Built entirely on Spring WebFlux, the application uses a small pool of non-blocking event loop threads. When Redis commits a state change, it publishes a notification that Java pushes directly to the browser via Server-Sent Events (SSE).
+
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/256a9771-e4ee-46ce-ad45-688fcb814d25" alt="Log Waterfall Demo" style="width: 100%; border-radius: 8px; border: 1px solid #1f2937;">
+</div>
+
+To prevent the browser's rendering engine from choking on hundreds of log lines per second, the frontend leverages a detached `DocumentFragment` to batch DOM mutations in memory before repainting the screen, keeping the framerate smooth.
+
+### 4. Decoupled AI Fraud Detection
+
+Running heavy machine learning models on the main server thread destroys P99 latency. Therefore, fraud detection is entirely decoupled.
+
+A separate Sentinel microservice collects live bids in micro-batches and sends them to a Python CatBoost model. If a bot is detected, an alert is pushed to a Redis Stream. The Java engine reads the stream, reverts the bad bid to the correct price, and bans the user asynchronously without interrupting the flow of ongoing auctions.
+
+## Live Telemetry & Monitoring
+
+Bidstream's performance and system health are tracked in real-time. You can view the live Grafana dashboard, which monitors throughput, P99 latency, and bot-rejection rates across the distributed system:
+
+- 📊 **[Live Grafana Dashboard](https://metrics.bidstream.dev)**
+
+## API Documentation
+
+The backend services auto-generate OpenAPI (Swagger) documentation. You can explore the live production endpoints, request payloads, and schema definitions interactively:
+
+- 📖 **[Bidstream API Swagger UI](https://bidstream.dev/swagger-ui/index.html)**
+
+## Quick Start
+
+The fastest way to run the entire distributed system locally is via Docker Compose.
+
 ```bash
-git clone [https://github.com/walker-systems/auction-system.git](https://github.com/walker-systems/auction-system.git)
+# 1. Clone the repository
+git clone https://github.com/walker-systems/auction-system.git
 cd auction-system
-```
 
-### 2. Start the Database
-```bash
+# 2. Start the infrastructure
 docker compose up -d
+
+# 3. Access the dashboard
+# Open your browser and navigate to: http://localhost:8080
 ```
 
-### 3. Start the Bidding Engine
-Open a terminal in the root folder and run:
+## Local Development Setup
+
+If you wish to run the microservices independently for development:
+
+### 1. Start Redis
+
 ```bash
+docker run -d -p 6379:6379 --name bidstream-redis redis:7.2-alpine
+```
+
+### 2. Start the Machine Learning API (Python)
+
+```bash
+cd sentinel-ml
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --port 8000
+```
+
+### 3. Start the Java Services
+
+```bash
+# Terminal 1: Bidding Engine
 cd bidding-engine
 ./mvnw spring-boot:run
-```
 
-### 4. Start the AI Sentinel
-Open a **new terminal window**, set your API key, and run the service:
-```bash
-cd auction-system/sentinel-service
-export SPRING_AI_OPENAI_API_KEY='sk-your-actual-key-here'
+# Terminal 2: Sentinel Service
+cd sentinel-service
 ./mvnw spring-boot:run
 ```
 
-### 5. Open the Storefront
-Go to **`http://localhost:8080`** in your browser.
-* Click **"Start Chaos"** to unleash the demo bots.
-* Watch the AI intercept and reverse fake bids in real time.
-
 ---
-
-## 🛑 How to Stop It
-
-When you are done testing, you can easily clean up your environment:
-
-1. **Stop the Apps:** Press `Ctrl + C` in both terminal windows (or simply close the tabs).
-2. **Stop the Database:** Run this command in the root folder to shut down Redis safely:
-   ```bash
-   docker compose down
-   ```
-
----
-
-## 🛠️ Troubleshooting
-
-* **Port 8080 or 8081 is in use:** If the apps fail to start, another background process might be using their ports. Find and kill the process:
-  ```bash
-  lsof -i :8080
-  kill -9 <PID>
-  ```
-* **Maven Wrapper (`./mvnw`) fails:** If hidden `.mvn` folders were lost during the download, regenerate the wrapper using your system's global Maven installation:
-  ```bash
-  mvn wrapper:wrapper
-  ```
-* **App crashes immediately:** Make sure you exported the `SPRING_AI_OPENAI_API_KEY` in the exact same terminal window where you are running the Sentinel service.
-
----
-
-## 📬 Let's Connect
-
-**Justin Walker**
-
-* 🌐 **Portfolio:** [justin-castillo.github.io](https://justin-castillo.github.io/)
-* 💼 **LinkedIn:** [Justin Walker](https://www.linkedin.com/in/justin-walker-0403923b1/)
-* 📧 **Email:** [justinwalker.contact@gmail.com](mailto:justinwalker.contact@gmail.com)
- ---
+<p><strong>Created by <a href="https://walker-systems.github.io/">Justin Walker</a></strong></p>
