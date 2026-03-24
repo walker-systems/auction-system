@@ -118,9 +118,9 @@ public class AuctionService {
                                     Instant newEndsAt = auction.endsAt();
                                     if (newEndsAt != null) {
                                         long timeLeftSec = Duration.between(Instant.now(), newEndsAt).getSeconds();
-                                        if (timeLeftSec > 0 && timeLeftSec <= 30) {
+                                        if (timeLeftSec > 0 && timeLeftSec <= 5) {
                                             newEndsAt = Instant.now().plusSeconds(30);
-                                            log.info("⏱️ SOFT CLOSE: Auction {} extended by 30 seconds!", auctionId);
+                                            log.info("⏱️ SOFT CLOSE: Auction {} extended by 30 seconds", auctionId);
                                         }
                                     }
 
