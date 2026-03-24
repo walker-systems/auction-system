@@ -115,9 +115,18 @@ public class AuctionService {
                                         return Mono.error(new IllegalArgumentException("Bid too low."));
                                     }
 
+                                    Instant newEndsAt = auction.endsAt();
+                                    if (newEndsAt != null) {
+                                        long timeLeftSec = Duration.between(Instant.now(), newEndsAt).getSeconds();
+                                        if (timeLeftSec > 0 && timeLeftSec <= 30) {
+                                            newEndsAt = Instant.now().plusSeconds(30);
+                                            log.info("⏱️ SOFT CLOSE: Auction {} extended by 30 seconds!", auctionId);
+                                        }
+                                    }
+
                                     Auction updatedAuction = new Auction(
                                             auction.id(), auction.itemId(), bidAmount, bidder,
-                                            auction.endsAt(), true, auction.version() + 1,
+                                            newEndsAt, true, auction.version() + 1,
                                             ipAddress, userAgent, reactionTimeMs,
                                             (reactionTimeMs < 100) ? 65 : 1, (reactionTimeMs < 100) ? 1 : 0
                                     );
@@ -249,7 +258,10 @@ public class AuctionService {
         BigDecimal trueStartingPrice = startingPrices.getOrDefault(auctionId, new BigDecimal("10.00"));
 
         return auctionRepository.revertBid(auctionId, fraudUser, trueStartingPrice)
-                .flatMap(auctionRepository::publishUpdate)
+                .flatMap(auction -> {
+                    log.warn("🔨 AUCTION REVERTED: {} reset to ${} after banning {}", auctionId, auction.currentPrice(), fraudUser);
+                    return auctionRepository.publishUpdate(auction);
+                })
                 .then();
     }
 

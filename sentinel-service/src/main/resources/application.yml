@@ -13,7 +13,7 @@ spring:
 
 logging:
   level:
-    org.springframework.data.redis: DEBUG
+    org.springframework.data.redis: INFO
 
 management:
   endpoints:

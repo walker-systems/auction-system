@@ -77,7 +77,8 @@ public class AuctionRepository {
         List<String> args = List.of(
                 String.valueOf(updatedAuction.currentPrice()),
                 updatedAuction.highBidder(),
-                String.valueOf(expectedVersion)
+                String.valueOf(expectedVersion),
+                String.valueOf(updatedAuction.endsAt().toEpochMilli() / 1000.0)
         );
 
         return stringTemplate.execute(updateAuctionLua, keys, args)

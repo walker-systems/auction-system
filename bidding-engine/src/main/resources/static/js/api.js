@@ -226,6 +226,25 @@ function tickTimers(skipRender = false) {
         if (diff <= 0) {
             timerEl.innerText = "EXPIRED";
             timerEl.className = "inline-block w-20 text-right text-gray-700";
+
+            const btn = auction.btnEl || document.getElementById(`btn-${id}`);
+            const bidInput = document.getElementById(`bid-amount-${id}`);
+            const userInput = document.getElementById(`username-${id}`);
+
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-30', 'cursor-not-allowed');
+                btn.classList.remove('hover:border-green-500', 'hover:text-green-400');
+                btn.innerText = 'LCK';
+            }
+            if (bidInput) {
+                bidInput.disabled = true;
+                bidInput.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            if (userInput) {
+                userInput.disabled = true;
+                userInput.classList.add('opacity-50', 'cursor-not-allowed');
+            }
             continue;
         }
 

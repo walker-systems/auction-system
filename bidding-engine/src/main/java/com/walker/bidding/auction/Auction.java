@@ -1,5 +1,6 @@
 package com.walker.bidding.auction;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.RedisHash;
 
@@ -8,6 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @RedisHash("auctions")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record Auction(
         @Id String id,
         String itemId,
