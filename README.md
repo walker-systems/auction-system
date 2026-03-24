@@ -17,7 +17,6 @@ Bidstream is a reactive, high-frequency trading platform designed to solve distr
   <br>
   <p><em>(Click above for a 3-minute technical walkthrough of the architecture and code.)</em></p>
 </div>
----
 
 ## Architecture
 
@@ -169,6 +168,8 @@ The backend services auto-generate OpenAPI (Swagger) documentation. Once the app
 - [Bidding Engine API](http://localhost:8080/swagger-ui.html)
 - [Sentinel Service API](http://localhost:8081/swagger-ui.html)
 - [Sentinel ML API](http://localhost:8000/docs)
+
+---
 
 <div align="center">
 <p><strong>Created by <a href="https://walker-systems.github.io/">Justin Walker</a></strong></p>
