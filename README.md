@@ -1,44 +1,42 @@
-# BidStream: High-Frequency Trading Engine & ML Sentinel
+<div align="center">
+  <img src="docs/exports/BIDSTREAM_logo_no_bg_001.png" alt="Bidstream Logo" width="600"/>
+</div>
 
-![Java](https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-7.2-DC382D?style=for-the-badge&logo=redis&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+<div align="center">
+  <video src="docs/exports/Hero_MP4_4_log_open_close.mp4" autoplay loop muted playsinline width="100%"></video>
+</div>
 
-> **[ PLACEHOLDER: INSERT YOUR 15-SECOND LOOM GIF HERE SHOWING THE DEMO RUNNING ]**
+# BIDSTREAM.dev
 
-BidStream is a reactive, horizontally scalable high-frequency trading simulation built to handle massive concurrent transaction volume. It features a distributed microservice architecture, strict P99 latency telemetry, and a dedicated Machine Learning pipeline to dynamically identify and ban malicious algorithmic trading bots in real-time.
+Bidstream is a reactive, high-frequency trading sandbox designed to solve complex distributed systems challenges. It demonstrates how to handle massive traffic spikes, mitigate race conditions via atomic state management, and run live machine learning fraud detection—all without degrading latency or crashing the main event loop.
 
-## System Architecture
+[![Bidstream Architecture Walkthrough](https://cdn.loom.com/sessions/thumbnails/0cd99f26a7a44051b5c202e6cfc240a9-with-play.gif)](https://www.loom.com/share/0cd99f26a7a44051b5c202e6cfc240a9)
+*(Click above for a 3-minute technical walkthrough of the architecture and code).*
 
-The ecosystem consists of four containerized nodes operating on a shared Docker bridge network:
+---
 
-1. **The Core Execution Engine (Spring WebFlux)**
-    * Built on non-blocking Netty to handle massive concurrent SSE (Server-Sent Events) connections.
-    * Utilizes **Optimistic Locking** and atomic Redis Lua scripts to completely eliminate race conditions and "Lost Updates" during high-density block trades.
-2. **The Primary Datastore (Redis)**
-    * Acts as the single source of truth for all financial instruments, execution states, and Pub/Sub event broadcasting.
-3. **The ML Inference API (Python / FastAPI)**
-    * A highly optimized `CatBoostClassifier` trained on synthetic telemetry data to evaluate user behavior (Reaction Time, TPS, IP Address).
-4. **The Sentinel Bridge (Spring Boot)**
-    * Consumes the global Redis firehose asynchronously, evaluates bids against the ML model, and injects fraudulent actors into a distributed `banned_users` Set while broadcasting transaction rollbacks.
+## 🏗️ System Architecture
 
-## Key Engineering Highlights
+The ecosystem relies on an event-driven, decoupled architecture.
 
-* **Layout-Shift-Free Telemetry UI:** The frontend is decoupled into a dedicated render loop to completely eliminate DOM repaints and Core Web Vitals layout shift, even when updating 100+ active rows per second.
-* **Deterministic Latency:** System load tests prove that P99 Latency remains flat (< 50ms) even as Application Throughput (TPS) scales to simulate thousands of concurrent trading bots, proving the application layer is effectively isolated from database bottlenecks.
-* **Resilient Graceful Degradation:** External API calls to the ML model are wrapped in non-blocking WebClient timeouts. If the AI goes offline, the trading engine gracefully degrades to accepting trades rather than cascading into failure.
+```mermaid
+graph TD
+    %% Styling Definitions
+    classDef client fill:#1f2937,stroke:#4ade80,stroke-width:2px,color:#f3f4f6
+    classDef engine fill:#1e40af,stroke:#60a5fa,stroke-width:2px,color:#eff6ff
+    classDef redis fill:#991b1b,stroke:#f87171,stroke-width:2px,color:#fef2f2
+    classDef python fill:#065f46,stroke:#34d399,stroke-width:2px,color:#ecfdf5
 
-## One-Click Boot (Local Deployment)
+    %% Nodes
+    Client["💻 Client Browser<br/>(React / Vanilla JS)"]:::client
+    Engine["⚙️ Bidding Engine<br/>(Java Spring WebFlux)"]:::engine
+    Redis[("🗄️ Redis Cache<br/>(State / Lua / PubSub)")]:::redis
+    Sentinel["🧠 Sentinel ML<br/>(Python CatBoost)"]:::python
 
-To run the entire distributed cluster locally, simply clone the repository and utilize Docker Compose.
-
-```bash
-# 1. Clone the repository
-git clone [https://github.com/walker-systems/auction-system.git](https://github.com/walker-systems/auction-system.git)
-cd auction-system
-
-# 2. Boot the cluster (Java 25, Python 3.10, Redis)
-docker compose up --build
+    %% Connections
+    Client -- "1. HTTP POST (Execute Bid)" --> Engine
+    Engine -- "2. Evaluate Atomic Lua Script" --> Redis
+    Engine -. "3. Async Micro-batch (WebClient)" .-> Sentinel
+    Redis -- "4. Pub/Sub (State Change Notification)" --> Engine
+    Engine -- "5. Server-Sent Events (Live Logs & Prices)" --> Client
+    Sentinel -. "6. Fraud Alert (Redis Stream)" .-> Redis
