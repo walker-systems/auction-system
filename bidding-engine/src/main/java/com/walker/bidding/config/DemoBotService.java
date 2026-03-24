@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -100,6 +101,10 @@ public class DemoBotService {
                 .flatMap(target -> {
                     if (!target.active()) return Mono.empty();
 
+                    if (target.endsAt() != null && target.endsAt().isBefore(Instant.now())) {
+                        return Mono.empty();
+                    }
+
                     BotPersona bot = botSwarm.get(ThreadLocalRandom.current().nextInt(botSwarm.size()));
 
                     BigDecimal minIncrement = BidIncrementCalculator.getIncrement(target.currentPrice());
@@ -119,9 +124,10 @@ public class DemoBotService {
                             )
                             .doOnSuccess(_ -> meterRegistry.counter("engine.bids.success").increment())
                             .doOnError(e -> {
-                                log.debug("⚠️ Bot bid failed: {}", e.getMessage());
+                                log.info("🧱 Bot Blocked: {}", e.getMessage());
                                 meterRegistry.counter("engine.bids.rejected").increment();
                             })
-                            .onErrorResume(_ -> Mono.empty());                }).then();
+                            .onErrorResume(_ -> Mono.empty());
+                }).then();
     }
 }

@@ -44,6 +44,12 @@ public class RateLimiterService {
                 .next()
                 .map(result -> {
                     Long allowed = (Long) result.getFirst();
-                    return allowed == 1L;
+                    boolean isApproved = (allowed != null && allowed == 1L);
+
+                    if (!isApproved) {
+                        log.warn("⚠️ Request denied: Rate limit exceeded for user [{}]", identifier);
+                    }
+
+                    return isApproved;
                 });
     }}
