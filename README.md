@@ -3,7 +3,7 @@
 </div>
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/b930b80a-cd4e-44ce-81ee-624e6e25ecac" autoplay loop muted playsinline width="100%"></video>
+  <img src="https://github.com/user-attachments/assets/13a9dbec-5468-4c49-8461-fdde9f90fa28" alt="Bidstream Demo" width="100%">
 </div>
 
 Bidstream is a reactive, high-frequency trading platform designed to solve distributed systems challenges. It demonstrates how to handle massive traffic spikes, mitigate race conditions via atomic state management, display continuously updating visuals representing real-time data, and run live machine learning fraud detection without degrading performance.
@@ -54,7 +54,7 @@ To protect the main Java JVM from wasting CPU cycles on dead or malicious traffi
 the perimeter is secured by a custom token bucket rate limiter.
 
 <div align="center">
-<video src="https://github.com/user-attachments/assets/f1f9540f-0e82-4e1e-908d-c241c55558a0" autoplay loop muted playsinline width="100%"></video>
+  <img src="https://github.com/user-attachments/assets/a52332db-6084-45f5-b7ed-c66bea9458e5" alt="Rate Limiter Demo" width="100%">
 </div>
 
 Every incoming request is evaluated in-memory within Redis. 
@@ -67,7 +67,7 @@ In a highly concurrent system, two users bidding at the exact same millisecond c
 "time of check to time of use" (TOCTOU) vulnerability.
 
 <div align="center">
-<video src="https://github.com/user-attachments/assets/c22dddcb-6f55-4858-98eb-8c9eb5ab3251" autoplay loop muted playsinline width="100%"></video>
+  <img src="https://github.com/user-attachments/assets/26fd5bb3-7585-4122-9561-84875e7682f3" alt="Bid Collision Demo" width="100%">
 </div>
 
 To solve this, the Java server does not evaluate the math. 
@@ -99,7 +99,7 @@ When Redis commits a state change, it publishes a notification that Java pushes 
 Server-Sent Events (SSE).
 
 <div align="center">
-<video src="https://github.com/user-attachments/assets/15cccc5f-2ad8-4194-bf57-8f5a0f120d76" autoplay loop muted playsinline width="100%"></video>
+  <img src="https://github.com/user-attachments/assets/256a9771-e4ee-46ce-ad45-688fcb814d25" alt="Log Waterfall Demo" width="100%">
 </div>
 
 To prevent the browser's rendering engine from choking on hundreds of log lines per second, the frontend leverages a detached `DocumentFragment` to batch DOM mutations in memory before repainting the screen, keeping the framerate smooth.
