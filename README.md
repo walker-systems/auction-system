@@ -12,8 +12,9 @@ Bidstream is a reactive, high-frequency trading platform designed to solve distr
 
 <div align="center">
   <a href="https://www.loom.com/share/0cd99f26a7a44051b5c202e6cfc240a9" target="_blank">
-    <img src="https://cdn.loom.com/sessions/thumbnails/0cd99f26a7a44051b5c202e6cfc240a9-with-play.gif" alt="Bidstream Architecture Walkthrough" width="800" style="border-radius: 8px; border: 1px solid #1f2937;">
+    <img src="https://cdn.loom.com/sessions/thumbnails/0cd99f26a7a44051b5c202e6cfc240a9-da1fb20a159afb4b-full-play.gif" alt="Building a High-Frequency Trading Terminal" width="800">
   </a>
+  <br>
   <p><em>(Click above for a 3-minute technical walkthrough of the architecture and code.)</em></p>
 </div>
 ---
