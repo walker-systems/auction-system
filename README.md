@@ -1,5 +1,7 @@
 <div align="center">
-  <img src="docs/exports/BIDSTREAM_logo_no_bg_001.png" alt="Bidstream Logo" width="600" />
+  <a href="https://bidstream.dev/" target="_blank">
+    <img src="docs/exports/BIDSTREAM_logo_no_bg_001.png" alt="Bidstream Logo" width="600" />
+  </a>
 </div>
 
 <div align="center">
@@ -161,13 +163,17 @@ cd sentinel-service
 ./mvnw spring-boot:run
 ```
 
-## Documentation
+## Live Telemetry & Monitoring
 
-The backend services auto-generate OpenAPI (Swagger) documentation. Once the application is running, you can explore the endpoints and schema definitions interactively:
+Bidstream's performance and system health are tracked in real-time. You can view the live Grafana dashboard, which monitors throughput, P99 latency, and bot-rejection rates across the distributed system:
 
-- [Bidding Engine API](http://localhost:8080/swagger-ui.html)
-- [Sentinel Service API](http://localhost:8081/swagger-ui.html)
-- [Sentinel ML API](http://localhost:8000/docs)
+- 📊 **[Live Grafana Dashboard](https://metrics.bidstream.dev)**
+
+## API Documentation
+
+The backend services auto-generate OpenAPI (Swagger) documentation. You can explore the live production endpoints, request payloads, and schema definitions interactively:
+
+- 📖 **[Bidstream API Swagger UI](https://bidstream.dev/swagger-ui/index.html)**
 
 ---
 
