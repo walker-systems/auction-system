@@ -3,17 +3,19 @@
 </div>
 
 <div align="center">
-  <video src="docs/exports/Hero_Final.mp4" autoplay loop muted playsinline width="100%"></video>
+  <video src="https://github.com/user-attachments/assets/a10b340f-1d32-40d5-82ae-5e3619780fa4" autoplay loop muted playsinline width="100%"></video>
 </div>
 
-Bidstream is a reactive, high-frequency trading platform designed to solve distributed systems challenges. 
-It demonstrates how to handle massive traffic spikes, mitigate race conditions via atomic state management, display
-continuously updating visuals representing real-time data,
-and run live machine learning fraud detection without degrading performance.
+Bidstream is a reactive, high-frequency trading platform designed to solve distributed systems challenges. It demonstrates how to handle massive traffic spikes, mitigate race conditions via atomic state management, display continuously updating visuals representing real-time data, and run live machine learning fraud detection without degrading performance.
 
-[![Bidstream Architecture Walkthrough](https://cdn.loom.com/sessions/thumbnails/0cd99f26a7a44051b5c202e6cfc240a9-with-play.gif)](https://www.loom.com/share/0cd99f26a7a44051b5c202e6cfc240a9)  
-*(Click above for a 3-minute technical walkthrough of the architecture and code.)*
+<br>
 
+<div align="center">
+  <a href="https://www.loom.com/share/0cd99f26a7a44051b5c202e6cfc240a9" target="_blank">
+    <img src="https://cdn.loom.com/sessions/thumbnails/0cd99f26a7a44051b5c202e6cfc240a9-with-play.gif" alt="Bidstream Architecture Walkthrough" width="800" style="border-radius: 8px; border: 1px solid #1f2937;">
+  </a>
+  <p><em>(Click above for a 3-minute technical walkthrough of the architecture and code.)</em></p>
+</div>
 ---
 
 ## Architecture
@@ -51,7 +53,7 @@ To protect the main Java JVM from wasting CPU cycles on dead or malicious traffi
 the perimeter is secured by a custom token bucket rate limiter.
 
 <div align="center">
-  <video src="docs/exports/Rate_Limiter_1.mp4" autoplay loop muted playsinline width="100%"></video>
+<video src="https://github.com/user-attachments/assets/5e145417-ead3-4b44-9bb6-2b276d221bc2" autoplay loop muted playsinline width="100%"></video>
 </div>
 
 Every incoming request is evaluated in-memory within Redis. 
@@ -64,7 +66,7 @@ In a highly concurrent system, two users bidding at the exact same millisecond c
 "time of check to time of use" (TOCTOU) vulnerability.
 
 <div align="center">
-  <video src="docs/exports/Bid_Collision_Final.mp4" autoplay loop muted playsinline width="100%"></video>
+<video src="https://github.com/user-attachments/assets/1ae5ce52-5e9a-4a56-a54a-490c346d844e" autoplay loop muted playsinline width="100%"></video>
 </div>
 
 To solve this, the Java server does not evaluate the math. 
@@ -96,7 +98,7 @@ When Redis commits a state change, it publishes a notification that Java pushes 
 Server-Sent Events (SSE).
 
 <div align="center">
-  <video src="docs/exports/Log_Waterfall_Final.mp4" autoplay loop muted playsinline width="100%"></video>
+<video src="https://github.com/user-attachments/assets/cfed8dd3-15f1-4128-a805-eb72f7c6c8aa" autoplay loop muted playsinline width="100%"></video>
 </div>
 
 To prevent the browser's rendering engine from choking on hundreds of log lines per second, the frontend leverages a detached `DocumentFragment` to batch DOM mutations in memory before repainting the screen, keeping the framerate smooth.
