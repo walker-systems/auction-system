@@ -1,0 +1,72 @@
+.md-typeset .mermaid {
+    text-align: center;
+}
+
+.md-typeset .mermaid svg {
+    display: block;
+    margin: 0 auto;
+}
+
+.md-typeset .gif-block {
+    text-align: center;
+    margin: 1.5rem auto 2rem auto;
+}
+
+.md-typeset .gif-block img {
+    display: block;
+    width: min(780px, 92%);
+    margin: 0 auto;
+    border-radius: 10px;
+    border: 1px solid #1f2937;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.md-typeset .gif-caption {
+    width: min(780px, 92%);
+    margin: 0.85rem auto 0 auto;
+    font-size: 0.92rem;
+    line-height: 1.65;
+    color: var(--md-default-fg-color--light);
+    text-align: left;
+}
+
+.md-sidebar--secondary {
+    padding-top: 1rem;
+}
+
+.md-sidebar--secondary .md-sidebar__scrollwrap {
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+}
+
+.md-nav--secondary {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 0.75rem 0.7rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+.md-nav--secondary .md-nav__title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.01em;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 0.45rem;
+}
+
+.md-nav--secondary .md-nav__link {
+    border-radius: 8px;
+    padding: 0.2rem 0.45rem;
+}
+
+.md-nav--secondary .md-nav__link:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+@media screen and (max-width: 1219px) {
+    .md-sidebar--secondary {
+        display: none;
+    }
+}

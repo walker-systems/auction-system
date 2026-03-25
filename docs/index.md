@@ -1,16 +1,29 @@
+---
+hide:
+  - navigation
+  - path
+---
+
+<style>
+  .md-content__inner > h1:first-of-type {
+    display: none;
+  }
+</style>
+
 <div align="center">
   <a href="https://bidstream.dev/" target="_blank">
-    <img src="./exports/BIDSTREAM_logo_no_bg_001.png" alt="Bidstream Logo" width="600" />
+    <img src="exports/BIDSTREAM_logo_no_bg_001.png" alt="Bidstream Logo" width="600" />
   </a>
 </div>
 
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/13a9dbec-5468-4c49-8461-fdde9f90fa28" alt="Bidstream Demo" style="width: 100%; border-radius: 8px; border: 1px solid #1f2937;">
+Bidstream is a reactive, high-frequency trading platform designed to handle massive traffic spikes, mitigate race conditions via atomic state management, display continuously updating visuals representing real-time data, and run live machine learning fraud detection without degrading performance.
+
+<div class="gif-block">
+  <img src="exports/Hero_Final.gif" alt="Bidstream Demo">
+  <p class="gif-caption">
+    Live dashboard processing bot swarm traffic while maintaining stable P99 latency.
+  </p>
 </div>
-
-Bidstream is a reactive, high-frequency trading platform designed to solve distributed systems challenges. It demonstrates how to handle massive traffic spikes, mitigate race conditions via atomic state management, display continuously updating visuals representing real-time data, and run live machine learning fraud detection without degrading performance.
-
-<br>
 
 <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border: 1px solid #1f2937; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);">
   <iframe
@@ -60,8 +73,11 @@ graph TD
 
 To protect the main Java JVM from wasting CPU cycles on dead or malicious traffic, the perimeter is secured by a custom token bucket rate limiter.
 
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/a52332db-6084-45f5-b7ed-c66bea9458e5" alt="Rate Limiter Demo" style="width: 100%; border-radius: 8px; border: 1px solid #1f2937;">
+<div class="gif-block">
+  <img src="exports/Rate_Limiter_Final.gif" alt="Rate Limiter Demo">
+  <p class="gif-caption">
+    Redis-backed Token Bucket algorithm instantly evades a simulated 50-request DDoS attack.
+  </p>
 </div>
 
 Every incoming request is evaluated in-memory within Redis. Malicious IPs attempting to flood the application are dropped instantly at the cache layer, maintaining stability for legitimate users.
@@ -69,12 +85,14 @@ Every incoming request is evaluated in-memory within Redis. Malicious IPs attemp
 ### 2. Atomic Transactions and Race Condition Prevention
 
 In a highly concurrent system, two users bidding at the exact same millisecond can cause a double-spend or "time of check to time of use" (TOCTOU) vulnerability.
-
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/26fd5bb3-7585-4122-9561-84875e7682f3" alt="Bid Collision Demo" style="width: 100%; border-radius: 8px; border: 1px solid #1f2937;">
-</div>
-
 To solve this, the Java server does not evaluate the math. Instead, it delegates the bid to an atomic Redis Lua script. This guarantees strict consistency and optimistic locking.
+
+<div class="gif-block">
+  <img src="exports/Bid_Collision_Final.gif" alt="Bid Collision Demo">
+  <p class="gif-caption">
+    An atomic Lua script safely resolves simultaneous bids, preventing race conditions and double-spends.
+  </p>
+</div>
 
 ```mermaid
 sequenceDiagram
@@ -82,25 +100,25 @@ sequenceDiagram
     participant J as Java Service
     participant R as Redis (Lua Script)
 
-    C->>J: POST /bid ($15.00, Expected Version: 4)
+    C->>J: POST /bid<br/>($15.00, Expected Version: 4)
     J->>R: EVAL update_auction.lua
     activate R
-    note over R: Transaction Locked
-    R->>R: 1. Check if Expired (TIME)
-    R->>R: 2. Verify Current Version == 4
-    R->>R: 3. Update Price to $15.00
-    R->>R: 4. Increment Version to 5
-    R-->>J: Return Success (New Version: 5)
+    Note right of R: Transaction locked
+    Note right of R: 1. Check if expired (TIME)<br/>2. Verify current version == 4<br/>3. Update price to $15.00<br/>4. Increment version to 5
+    R-->>J: Return success<br/>(New Version: 5)
     deactivate R
-    J-->>C: 200 OK (Bid Accepted)
+    J-->>C: 200 OK<br/>(Bid Accepted)
 ```
 
 ### 3. Non-Blocking I/O and Real-Time Data Streaming
 
 Built entirely on Spring WebFlux, the application uses a small pool of non-blocking event loop threads. When Redis commits a state change, it publishes a notification that Java pushes directly to the browser via Server-Sent Events (SSE).
 
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/256a9771-e4ee-46ce-ad45-688fcb814d25" alt="Log Waterfall Demo" style="width: 100%; border-radius: 8px; border: 1px solid #1f2937;">
+<div class="gif-block">
+  <img src="exports/Log_Waterfall_Final.gif" alt="Log Waterfall Demo">
+  <p class="gif-caption">
+    Server-Sent Events stream hundreds of logs per second without choking the browser's render thread.
+  </p>
 </div>
 
 To prevent the browser's rendering engine from choking on hundreds of log lines per second, the frontend leverages a detached `DocumentFragment` to batch DOM mutations in memory before repainting the screen, keeping the framerate smooth.
