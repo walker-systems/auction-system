@@ -4,8 +4,8 @@ site_author: Justin Walker
 
 theme:
   name: material
-  logo: exports/BIDSTREAM_logo_no_bg_001.png
-  favicon: exports/BIDSTREAM_logo_no_bg_001.png
+  logo: exports/jw-mark.svg
+  favicon: exports/jw-mark.svg
   palette:
     scheme: slate
     primary: black
