@@ -1,134 +1,170 @@
-# Sentinel Service ⏲
+---
+hide:
+  - navigation
+  - path
+---
 
-> A high-performance, distributed rate limiting microservice built with Spring Boot WebFlux and Redis.
+<style>
+  .md-content__inner > h1:first-of-type {
+    display: none;
+  }
+</style>
 
-![Java](https://img.shields.io/badge/Java-25-orange?style=flat-square)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.2-green?style=flat-square)
-![Redis](https://img.shields.io/badge/Redis-Distributed-red?style=flat-square)
-![Coverage](https://img.shields.io/badge/Coverage-95%25-brightgreen?style=flat-square)
-![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=flat-square)
+<div align="center">
+  <p style="letter-spacing: 0.08em; text-transform: uppercase; color: #9ca3af; margin-bottom: 0.35rem;">
+    Component
+  </p>
+  <h1 style="margin-top: 0;">Sentinel Service</h1>
+  <p style="max-width: 760px; margin: 0 auto 1.25rem auto; color: #b6bdc8;">
+    Responsible for rate-limit enforcement and asynchronous fraud screening.
+  </p>
+</div>
 
-## ☰ Overview
+---
 
-Sentinel is designed to protect downstream services from being overwhelmed with traffic. Originally designed to accompany
-the "Bidding Engine". 
+## Purpose
 
-**Key Features**
-* **Distributed State:** Limits/usage are shared across multiple instances via Redis. 
-* **Atomic Operations:** Lua scripts prevent race conditions.
-* **Reactive Stack:** Built with WebFlux to leverage non-blocking performance. 
-* **Ready to Run:** Fully dockerized. 
+Sentinel serves two roles. On the synchronous path, it applies Redis-backed token bucket decisions before protected services absorb unnecessary traffic. Off the hot path, it consumes bid events from Redis Streams, batches them for model scoring, and records enforcement outcomes for the rest of the system.
 
-## 🐳 Quick Start
+## Responsibilities
 
-1. Create `compose.yaml`:
+- Enforce per-client request budgets through atomic token bucket decisions
+- Share rate-limit state across multiple service instances
+- Consume bid events from Redis Streams
+- Forward micro-batches to the Python `sentinel-ml` service
+- Write flagged actors to the `banned_users` Redis set
+
+## Rate-Limit Decision Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Sentinel Service
+    participant R as Redis
+
+    C->>S: POST /check
+    S->>R: Execute token bucket Lua script
+    R-->>S: Allowed / blocked + remaining tokens
+    S-->>C: 200 OK or 429 Too Many Requests
+```
+
+The synchronous path is intentionally short. Sentinel receives a request, delegates the bucket update to Redis, and returns the decision without additional coordination.
+
+## Fraud Analysis Flow
+
+```mermaid
+sequenceDiagram
+    participant X as Redis Stream
+    participant S as Sentinel Service
+    participant M as sentinel-ml
+    participant R as Redis
+
+    S->>X: Read bid events
+    S->>S: Form micro-batch
+    S->>M: Submit batch for scoring
+    M-->>S: Fraud predictions
+    S->>R: Add flagged actors to banned_users
+```
+
+This pipeline stays off the request path. Bids are scored asynchronously, and enforcement data is written back to Redis without adding latency to bid execution.
+
+## Token Bucket Model
+
+Each caller is identified by `X-User-ID`. Redis stores the current token count and last refill time for that caller. On each request, Sentinel:
+
+1. Computes elapsed time since the last refill
+2. Adds newly earned tokens, capped at bucket capacity
+3. Deducts the request cost when enough tokens are available
+4. Returns a deny response when capacity is exhausted
+
+All four steps run inside one Lua script so refill and consumption happen as a single atomic operation.
+
+## Runtime Stack
+
+| Layer | Technology |
+| --- | --- |
+| Language | Java 25 |
+| Framework | Spring Boot 4 / WebFlux |
+| State Store | Redis |
+| Coordination | Lua scripts |
+| Stream Processing | Redis Streams |
+| ML Integration | Python FastAPI (`sentinel-ml`) |
+
+## Quick Start
 
 ```yaml
 services:
-  sentinel:
-    image: justinwalkerhub/sentinel-service:latest
+  sentinel-service:
+    build: ./sentinel-service
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
       - SPRING_DATA_REDIS_HOST=redis
     depends_on:
       - redis
 
   redis:
-    image: redis:alpine
+    image: redis:7.2-alpine
     ports:
       - "6379:6379"
 ```
 
-2. Run it:
-
-```docker compose up```
-
-## 👩🏻‍💻 Development Setup
-
-**Prerequisites**
-* JDK 25+
-* Docker (for Redis)
-
-1. Start Redis
-
-```docker run -d -p 6379:6379 --name sentinel-redis redis:alpine```
-
-2. Run the App 
-
-```./mvnw spring-boot:run```
-
-## 🔌 API Usage
-
-**Check Rate Limit**
-
-**GET** ```/check```
-
-Returns ```200 OK``` if allowed, or ```429 Too Many Requests``` if blocked. 
-
-**Parameters**
-* ```capacity``` (int): Max Tokens in the bucket. 
-* ```rate``` (int): Refill rate (tokens per second).
-* ```cost``` (int): Cost of this request. 
-* **Header** ```X-User-ID```: Unique identifier for the user. 
-
-**Example Request:**
 ```bash
-curl -v "http://localhost:8080/check?capacity=10&rate=1" \ 
--H "X-User-ID: test_user"
+docker compose up -d
 ```
 
-**Response (JSON):**
+## Local Development
+
+### Start Redis
+
+```bash
+docker run -d -p 6379:6379 --name sentinel-redis redis:7.2-alpine
+```
+
+### Run the service
+
+```bash
+./mvnw spring-boot:run
+```
+
+## API
+
+### Endpoint
+
+```text
+POST /check
+```
+
+### Parameters
+
+- `capacity` - maximum number of tokens in the bucket
+- `rate` - refill rate in tokens per second
+- `cost` - number of tokens consumed by the request
+- `X-User-ID` header - unique identifier for the caller
+
+### Example
+
+```bash
+curl -X POST "http://localhost:8081/check?capacity=10&rate=1&cost=1" \
+  -H "X-User-ID: test_user"
+```
+
+### Response
+
 ```json
 {
-    "allowed": true
+  "allowed": true
 }
 ```
 
-## 📘 Documentation 
-Interactive API documentation (Swagger UI) is available when the app is running:
+## API Documentation
 
-[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+When the service is running locally, the OpenAPI documentation is available at:
 
-## 📐 Architecture
-
-**The Token Bucket Algorithm**
-
-1. **State:** Each user (X-User-ID) has a "Bucket" stored on Redis. 
-2. **Refill:** Tokens are added based on time elapsed since last request. 
-3. **Consume:** If the bucket has enough tokens, the request is allowed (tokens decrement). 
-4. **Reject:** If user doesn't have enough tokens, request is denied. 
-
-All of this happens inside a single Lua script to ensure atomicity. 
-
-```lua
--- Simplified Lua Logic
-
-local time_delta_seconds = math.max(0, time_now - time_of_last_refill)
-local tokens_owed = time_delta_seconds * token_refill_rate
-current_tokens = math.min(token_capacity, current_tokens + tokens_owed)
-
--- Code omitted
-
-if current_tokens >= tokens_requested then
-can_afford_request = true
-current_tokens = current_tokens - tokens_requested
-redis.call("HMSET", key, "current_tokens", current_tokens, "time_of_last_refill", time_now)
-redis.call("EXPIRE", key, 3600)
-else
-can_afford_request = false
-end
-
-return { can_afford_request and 1 or 0, current_tokens }
+```text
+http://localhost:8081/swagger-ui.html
 ```
 
 ---
 
-### 👤 Justin Walker
-
-* 🌐 [GitHub Profile](https://github.com/walker-systems)
-* 💼 [LinkedIn](https://www.linkedin.com/in/justin-castillo-69351198/)
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Made%20with-Java%20%26%20Redis-blue?style=for-the-badge" alt="Made with Love">
-</p>
+<p><strong>Created by <a href="https://walker-systems.github.io/">Justin Walker</a></strong></p>

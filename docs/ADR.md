@@ -1,181 +1,254 @@
-# Architecture Decision Records (ADR)
+---
+hide:
+  - navigation
+  - path
+---
 
-## ADR-001: Use of Reactive Redis over RDBMS
+<style>
+  .md-content__inner > h1:first-of-type {
+    display: none;
+  }
+</style>
 
-### Context
-Auctions experience sudden traffic spikes (10k+ TPS) in the final seconds. Standard relational databases (like Postgres) struggle to handle this concurrency without heavy scaling.
-
-### Decision
-**Spring Data Redis Reactive** will be used as the primary database for active auctions.
-
-### Consequences
-* **Pros:** Very fast read/writes (<5ms) and built-in support for atomic operations.
-* **Cons:** All active auction data must fit in server RAM.
-* **Mitigation:** Redis AOF (Append Only File) is enabled to back up data to the disk.
+<div align="center">
+  <p style="letter-spacing: 0.08em; text-transform: uppercase; color: #9ca3af; margin-bottom: 0.35rem;">
+    Document
+  </p>
+  <h1 style="margin-top: 0;">Architecture Decisions</h1>
+  <p style="max-width: 760px; margin: 0 auto 1.25rem auto; color: #b6bdc8;">
+    Notes on major design choices and tradeoffs.
+  </p>
+</div>
 
 ---
 
-## ADR-002: Java 25 & Records
+## ADR-001: Reactive Redis for Active Auction State
 
 ### Context
-Domain objects in this bidding system mostly hold data, rather than complex business logic.
+Active auction state can experience sharp increases in write concurrency, especially near auction close. 
+That path needs low-latency reads, writes, and atomic operations, while long-term persistence can be handled separately.
 
 ### Decision
-**Java 25 Records** will be used for all domain models.
+Redis, accessed through Spring Data Redis Reactive, is used as the primary store for active auction state.
 
 ### Consequences
-* **Pros:** Immutable and thread-safe by default.
-* **Cons:** Cannot use standard JPA (Hibernate) lazy loading. This is acceptable since Redis is used instead of JPA.
+- **Pros:** Fast reads and writes, atomic primitives, and a natural fit for low-latency reactive workflows.
+- **Cons:** Active state must fit in memory.
+- **Mitigation:** Redis AOF is enabled to improve crash recovery by persisting write commands that can be replayed on restart.
 
 ---
 
-## ADR-003: Adoption of ReactiveRedisTemplate & JSON Serialization
+## ADR-002: Java Records for Domain Models
 
 ### Context
-Standard Spring Data reactive repositories do not support Redis. Additionally, the default JSON serializer is deprecated.
+Most domain types in the system are data carriers rather than behavior-heavy objects.
 
 ### Decision
-1. Database access methods (Repository pattern) are manually written using `ReactiveRedisTemplate`.
-2. The newer `RedisSerializer.json()` is used for serialization.
+Java records are used for domain models.
 
 ### Consequences
-* **Pros:** Fully non-blocking I/O.
-* **Cons:** Requires writing custom code for standard database actions (`save`, `find`, `delete`).
+- **Pros:** Concise, immutable by default, readable.
+- **Cons:** They do not align with patterns built around mutable JPA entities.
+- **Rationale:** The system uses Redis rather than JPA, so that tradeoff is acceptable.
 
 ---
 
-## ADR-004: Using Mono.defer() for Reactive Database Mocking
+## ADR-003: ReactiveRedisTemplate with JSON Serialization
 
 ### Context
-When unit testing code that retries a failed database update, standard mock objects return the exact same data on every retry. This fails to simulate a real database where the data might change between retries.
+This system needs direct, non-blocking access to Redis data structures and operations beyond simple CRUD, including sets, sorted sets, and Lua-backed atomic updates. Older (deprecated) 
+Jackson-based serializer choices are also not a good foundation for a new codebase.
 
 ### Decision
-`Mono.defer()` is utilized when mocking reactive streams that need to simulate changing states. 
+Redis access is written with `ReactiveRedisTemplate`, and serialization uses `RedisSerializer.json()`.
 
 ### Consequences
-* **Pros:** Tests correctly simulate the database changing during a retry loop.
-* **Cons:** N/A
+- **Pros:** Fully non-blocking access and explicit control over persistence behavior.
+- **Cons:** Standard repository operations must be implemented manually.
 
 ---
 
-## ADR-005: Decoupling Sentinel from Bidding Engine's Redis
+## ADR-004: `Mono.defer()` for Stateful Reactive Tests
 
 ### Context
-Currently, the AI (Sentinel) and the main bidding system share one Redis database. Heavy AI data processing could slow down the core bidding system.
+Retry logic is difficult to test when mocks always return the same state on every invocation.
 
 ### Decision
-*(Planned)* The Sentinel's state management will be moved to its own separate database. Redis will only be shared for real-time messaging (Pub/Sub).
+`Mono.defer()` is used in tests that need to simulate state changing between retries.
 
 ### Consequences
-* **Pros:** Prevents the AI from slowing down user bids.
-* **Cons:** Requires setting up and managing more database infrastructure.
+- **Pros:** Tests reflect the behavior of a real datastore more closely.
+- **Cons:** Adds complexity.
 
 ---
 
-## ADR-006: Providing the Sentinel a Feedback Loop
+## ADR-005: Separate Sentinel State from Core Auction State
 
 ### Context
-The AI currently evaluates bids without any way to learn from its mistakes (e.g., flagging a real user as a bot).
+The bidding engine and Sentinel currently share Redis infrastructure. Analysis workloads should not be able to interfere with the core bid path.
 
 ### Decision
-*(Planned)* AI decisions will be saved to an audit log. Admins will be allowed to correct mistakes, and this corrected data will be used to retrain the model.
+Sentinel state is planned to move to separate backing infrastructure. Shared Redis should remain limited to messaging and coordination where cross-service communication is required.
 
 ### Consequences
-* **Pros:** The AI gets more accurate over time.
-* **Cons:** Requires building an admin interface and a data feedback pipeline.
+- **Pros:** Reduces the risk that analysis activity will impact auction latency.
+- **Cons:** Adds complexity.
 
 ---
 
-## ADR-007: Upgrading to Event Sourcing for Rollbacks
+## ADR-006: Feedback Loop for Fraud Decisions
 
 ### Context
-When a fraudulent bid is canceled, the database is currently overwritten. This deletes the record of who the previous valid bidder was.
+Fraud decisions are only useful in the long term if mistakes can be reviewed and incorporated into future model updates.
 
 ### Decision
-*(Planned)* The architecture will transition to Event Sourcing. Instead of just saving the "current bid," every action (bids, rejections) will be saved as an append-only log of events.
+A feedback loop is planned in which fraud outcomes are written to an audit trail, corrected when necessary, and reused during retraining.
 
 ### Consequences
-* **Pros:** Makes it easy and accurate to undo fraudulent bids. Provides excellent historical data for training the AI.
-* **Cons:** Requires a major architectural rewrite.
+- **Pros:** Improves model quality over time.
+- **Cons:** Requires an additional pipeline/interface.
 
 ---
 
-## ADR-008: Deepening AI Functionality
+## ADR-007: Event Sourcing for Reliable Rollbacks
 
 ### Context
-Using a standard LLM via Spring AI is too slow and expensive for evaluating high-speed numerical data (like reaction times and bid amounts).
+Overwriting the current bid state makes fraud reversals harder because the system loses the full sequence of prior accepted actions.
 
 ### Decision
-*(Planned)* The general LLM will be replaced with a specialized Machine Learning model (`CatBoost`) running on a Python `FastAPI` server.
+An eventual transition to event sourcing is planned. Bids, reversals, and enforcement actions would be recorded as append-only events rather than only as the current snapshot.
 
 ### Consequences
-* **Pros:** Much faster processing and lower costs.
-* **Cons:** Adds Python to the tech stack, necessitating the management of a multi-language (polyglot) architecture.
+- **Pros:** Makes rollback logic more accurate and improves historical traceability.
+- **Cons:** Requires a substantial architectural shift.
 
 ---
 
-## ADR-009: Decoupled ML Pipeline via Synthetic Data
+## ADR-008: Specialized ML Service for Fraud Scoring
 
 ### Context
-Building a complex ML model and connecting a new Python server to the existing Java backend at the same time is risky. It can cause massive integration bugs at the end of the sprint.
+General-purpose LLM integration is poorly suited to fast numerical fraud evaluation. The workload is structured, repetitive, and latency-sensitive.
 
 ### Decision
-The network connection will be built and tested first using temporary, fake data and a simple AI model. Once the Java and Python servers communicate perfectly, the real, complex ML model will be swapped in.
+Fraud scoring runs through a dedicated Python `FastAPI` service backed by a specialized model such as `CatBoost`, rather than through a general LLM stack.
 
 ### Consequences
-* **Pros:** Proves the network plumbing works early. Keeps the Java and Python code strictly decoupled.
-* **Cons:** Requires writing throwaway scripts to generate the fake data.
+- **Pros:** Lower latency, lower cost, and a better fit for tabular inference.
+- **Cons:** Introduces a polyglot architecture with Java and Python services.
 
 ---
 
-## ADR-010: Containerization Strategy for Python ML Microservice
+## ADR-009: Decouple Model Development from Network Integration
 
 ### Context
-Java applications often use automated Buildpacks (like `mvn spring-boot:build-image`) to create containers without manual setup. However, Python Machine Learning libraries (like CatBoost) require specific operating system dependencies. Automated tools often fail to guess and install these low-level requirements correctly.
+Building the ML model and the Java-to-Python integration at the same time increases delivery risk.
 
 ### Decision
-A standard `Dockerfile` will be used to containerize the Python ML microservice instead of automated Buildpacks.
+The service boundary is validated first with simple models and synthetic data. Once the transport path is stable, the production model can be introduced behind the same interface.
 
 ### Consequences
-* **Pros:** Guarantees the production container exactly matches the local training environment.
-* **Cons:** Requires manual file maintenance and differs from the Java project's container strategy.
-
-## ADR-011: Atomic Proxy Bidding via Redis Lua Scripts
-
-### Context
-High-concurrency proxy bidding (multiple users setting maximum bids simultaneously) causes race conditions if handled via standard Java read-modify-write operations across the network.
-
-### Decision
-Core bidding logic, including tiered increment calculations and proxy bid resolution, is implemented as a custom Lua script executed directly inside Redis.
-
-### Consequences
-* **Pros:** Guarantees atomic execution and prevents race conditions without the overhead of distributed locks.
-* **Cons:** Business logic is split between Java and Lua, making debugging and maintenance more complex.
+- **Pros:** Reduces integration risk and isolates failures earlier.
+- **Cons:** Requires temporary tooling that is not part of the final product.
 
 ---
 
-## ADR-012: Integration Testing via Testcontainers
+## ADR-010: Manual Dockerfile for the Python ML Service
 
 ### Context
-Core database operations rely heavily on custom Redis Lua scripts. These scripts cannot be accurately simulated using standard Java mock objects (like Mockito) during testing.
+Python ML services often depend on low-level system packages that automated container tooling does not consistently infer.
 
 ### Decision
-Testcontainers is adopted for integration tests, spinning up ephemeral Redis Stack Docker containers during the test lifecycle.
+The Python service is containerized with a hand-written Dockerfile instead of an automated buildpack flow.
 
 ### Consequences
-* **Pros:** Verifies actual database and script behavior against a real, isolated Redis engine.
-* **Cons:** Increases test suite execution time and requires Docker to be running on the host machine.
+- **Pros:** The runtime image is explicit and reproducible.
+- **Cons:** Container maintenance is manual.
 
 ---
 
-## ADR-013: Epoch Timestamps for Cross-Boundary Time Math
+## ADR-011: Hybrid Proxy Bidding with Atomic Redis Lua Persistence
 
 ### Context
-The anti-sniping "soft close" feature requires comparing and extending auction end times inside a Redis Lua script. Passing Java `Instant` objects natively caused serialization and comparison mismatches between JSON strings and numeric database formats.
+Proxy bidding and bid increments are vulnerable to race conditions when implemented as ordinary application-side read-modify-write logic.
 
 ### Decision
-Time thresholds are calculated as Epoch seconds in Java and passed to Lua scripts as numeric values for direct mathematical comparison.
+Proxy bidding uses a hybrid design: the Java service resolves forward-path bidding outcomes, 
+while Redis Lua scripts provide atomic state persistence and rollback recomputation.
 
 ### Consequences
-* **Pros:** Eliminates date parsing errors and guarantees precise, cross-boundary time comparisons.
-* **Cons:** Requires manual conversion to and from epoch seconds when invoking database scripts.
+- **Pros:** State transitions are atomic and do not require distributed locks.
+- **Cons:** Business logic is split across Java and Lua.
+
+---
+
+## ADR-012: Testcontainers for Redis Integration Testing
+
+### Context
+Mocking cannot fully validate Redis Lua behavior or script execution semantics.
+
+### Decision
+Integration tests run against ephemeral Redis containers using Testcontainers.
+
+### Consequences
+- **Pros:** Tests execute against a real Redis engine and real scripts.
+- **Cons:** Test runs are slower and require Docker.
+
+---
+
+## ADR-013: Epoch Time for Cross-Boundary Comparisons
+
+### Context
+Soft-close logic extends auction end times inside Lua scripts. Passing high-level Java time objects across the Java-Lua boundary created serialization and comparison issues.
+
+### Decision
+Time values are passed as epoch seconds.
+
+### Consequences
+- **Pros:** Comparisons remain numeric and predictable across language boundaries.
+- **Cons:** Requires explicit time conversion, increasing the risk of careless mistakes (with time units, for example).
+
+---
+
+## ADR-014: Asynchronous Fraud Detection via Redis Streams
+
+### Context
+Scoring each bid synchronously would add network latency and model overhead directly to the bid path. That cost is least acceptable at the exact moment bidding traffic is highest.
+
+### Decision
+Fraud analysis is decoupled from bid execution through Redis Streams. The Bidding Engine writes bid events to a stream, and Sentinel consumes them asynchronously for downstream scoring and enforcement.
+
+### Consequences
+- **Pros:** Bid execution remains fast, and Sentinel can scale independently of the core auction service.
+- **Cons:** Fraud enforcement becomes eventually consistent. A malicious bid may be accepted briefly before later review and reversal.
+
+---
+
+## ADR-015: Micro-Batching for ML Inference
+
+### Context
+Submitting one HTTP request to the ML service for every individual bid creates unnecessary transport overhead and does not use the scoring service efficiently.
+
+### Decision
+Sentinel uses micro-batching with a bounded time and size window. Bid events are accumulated briefly, then submitted to the ML service as a batch.
+
+### Consequences
+- **Pros:** Reduces per-request overhead and improves inference efficiency.
+- **Cons:** Adds a small delay to the fraud pipeline while the batch window fills.
+
+---
+
+## ADR-016: Smart Default Routing for Polyglot Development
+
+### Context
+A Java service and a Python service do not always run in the same environment during development. One may run in Docker while the other runs directly in an IDE.
+
+### Decision
+Service URLs are configured with sensible defaults and environment overrides, allowing the same codebase to run in Docker Compose or locally with minimal setup.
+
+### Consequences
+- **Pros:** Improves developer experience and reduces setup friction across environments.
+- **Cons:** Developers still need to understand which effective route is active at runtime.
+
+---
+
+<p><strong>Created by <a href="https://walker-systems.github.io/">Justin Walker</a></strong></p>
