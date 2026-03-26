@@ -19,7 +19,7 @@ hide:
 Bidstream is a reactive, high-frequency trading platform designed to handle massive traffic spikes, mitigate race conditions via atomic state management, display continuously updating visuals representing real-time data, and run live machine learning fraud detection without degrading performance.
 
 <div class="gif-block">
-  <img src="exports/Hero_Final.gif" alt="Bidstream Demo">
+  <img src="exports/Hero_Public_01.gif" alt="Bidstream Demo">
   <p class="gif-caption">
     Live dashboard processing bot swarm traffic while maintaining stable P99 latency.
   </p>
@@ -74,7 +74,7 @@ graph TD
 To protect the main Java JVM from wasting CPU cycles on dead or malicious traffic, the perimeter is secured by a custom token bucket rate limiter.
 
 <div class="gif-block">
-  <img src="exports/Rate_Limiter_Final.gif" alt="Rate Limiter Demo">
+  <img src="exports/Rate_Limiter_Public_01.gif" alt="Rate Limiter Demo">
   <p class="gif-caption">
     Redis-backed Token Bucket algorithm instantly evades a simulated 50-request DDoS attack.
   </p>
@@ -122,6 +122,16 @@ Built entirely on Spring WebFlux, the application uses a small pool of non-block
 </div>
 
 To prevent the browser's rendering engine from choking on hundreds of log lines per second, the frontend leverages a detached `DocumentFragment` to batch DOM mutations in memory before repainting the screen, keeping the framerate smooth.
+
+<div class="gif-block">
+  <img src="exports/Telemetry_Public_01.gif" alt="Real-time System Telemetry">
+  <p class="gif-caption">
+    Live Throughput (TPS) and P99 Latency metrics reacting instantly to the distributed bot swarm.
+  </p>
+</div>
+
+The backend utilizes Spring Boot's Micrometer registry to aggregate high-frequency requests into rolling windows. 
+The frontend then processes this time-series data using a lightweight rendering cycle.
 
 ### 4. Decoupled AI Fraud Detection
 
