@@ -149,7 +149,7 @@ Bidstream's performance and system health are tracked in real-time. You can view
 
 The backend services auto-generate OpenAPI (Swagger) documentation. You can explore the live production endpoints, request payloads, and schema definitions interactively:
 
-- 📖 **[Bidstream API Swagger UI](https://bidstream.dev/swagger-ui/index.html)**
+- 📖 **Link available upon request** 
 
 ## Quick Start
 
