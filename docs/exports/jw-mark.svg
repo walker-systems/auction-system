@@ -1,0 +1,23 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="bg" x1="48" y1="0" x2="48" y2="96" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#171C22"/>
+            <stop offset="1" stop-color="#0F1317"/>
+        </linearGradient>
+    </defs>
+
+    <rect x="1" y="1" width="94" height="94" rx="24" fill="url(#bg)" stroke="#232A32" stroke-width="2"/>
+
+    <text
+            x="48"
+            y="54"
+            text-anchor="middle"
+            fill="#C8D1DB"
+            font-family="Inter, Segoe UI, Arial, sans-serif"
+            font-size="24"
+            font-weight="600"
+            letter-spacing="2"
+    >
+        JW
+    </text>
+</svg>
