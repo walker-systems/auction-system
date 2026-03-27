@@ -220,14 +220,6 @@ setInterval(() => {
             }
             const tps = bidTimestamps.length;
 
-            const uniqueBidders = new Set();
-            for (const id in activeAuctions) {
-                const bidder = activeAuctions[id].highBidder;
-                if (bidder && bidder !== 'System' && bidder !== 'SYS') {
-                    uniqueBidders.add(bidder);
-                }
-            }
-
             const elP99 = document.getElementById('stat-p99');
             if (elP99) elP99.innerText = p99.toFixed(2);
 
@@ -239,9 +231,6 @@ setInterval(() => {
 
             const elActive = document.getElementById('stat-active');
             if (elActive) elActive.innerText = globalActiveCount.toLocaleString();
-
-            const elBidders = document.getElementById('stat-bidders');
-            if (elBidders) elBidders.innerText = uniqueBidders.size.toLocaleString();
 
             if (telemetryChart) {
                 telemetryChart.data.datasets[0].data.shift();
