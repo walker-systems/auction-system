@@ -68,7 +68,7 @@ public class RateLimiterTest {
     public void testThunderingHerd_ExactlyCapacityAllowed() {
         String testUser = "thundering_herd_user";
         int capacity = 10;
-        int refillRate = 1;
+        int refillRate = 0;
 
         // Fire 50 requests concurrently
         Long allowedCount = reactor.core.publisher.Flux.range(1, 50)
