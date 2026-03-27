@@ -1,0 +1,870 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Real-Time Bidding & Fraud Detection Platform">
+      
+      
+        <meta name="author" content="Justin Walker">
+      
+      
+      
+      
+        <link rel="next" href="ADR/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="exports/jw-mark.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Bidstream Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="stylesheets/extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="." title="Bidstream Documentation" class="md-header__button md-logo" aria-label="Bidstream Documentation" data-md-component="logo">
+      
+  <img src="exports/jw-mark.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Bidstream Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Home
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://walker-systems.github.io/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Back to Portfolio
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="ADR/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Decisions
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="engine/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Component: Bidding Engine
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="sentinel/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Component: Sentinel Service
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+                
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" hidden>
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="Bidstream Documentation" class="md-nav__button md-logo" aria-label="Bidstream Documentation" data-md-component="logo">
+      
+  <img src="exports/jw-mark.svg" alt="logo">
+
+    </a>
+    Bidstream Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://walker-systems.github.io/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Back to Portfolio
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="." class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-ddos-mitigation-at-the-cache-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. DDoS Mitigation at the Cache Layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-atomic-transactions-and-race-condition-prevention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Atomic Transactions and Race Condition Prevention
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-non-blocking-io-and-real-time-data-streaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Non-Blocking I/O and Real-Time Data Streaming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-decoupled-ai-fraud-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Decoupled AI Fraud Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#live-telemetry-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live Telemetry &amp; Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#local-development-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Local Development Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Local Development Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-start-redis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Start Redis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-start-the-machine-learning-api-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Start the Machine Learning API (Python)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-start-the-java-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Start the Java Services
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="engine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component: Bidding Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sentinel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component: Sentinel Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+
+
+
+
+  <h1>Home</h1>
+
+<style>
+  .md-content__inner > h1:first-of-type {
+    display: none;
+  }
+</style>
+
+<div align="center">
+  <a href="https://bidstream.dev/" target="_blank">
+    <img src="exports/BIDSTREAM_logo_no_bg_001.png" alt="Bidstream Logo" width="600" />
+  </a>
+</div>
+
+<p>Bidstream is a reactive, high-frequency trading platform designed to handle massive traffic spikes, mitigate race conditions via atomic state management, display continuously updating visuals representing real-time data, and run live machine learning fraud detection without degrading performance.</p>
+<div class="gif-block">
+  <img src="exports/Hero_Public_01.gif" alt="Bidstream Demo">
+  <p class="gif-caption">
+    Live dashboard processing bot swarm traffic while maintaining stable P99 latency.
+  </p>
+</div>
+
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border: 1px solid #1f2937; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);">
+  <iframe
+    src="https://www.loom.com/embed/0cd99f26a7a44051b5c202e6cfc240a9?hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true"
+    frameborder="0"
+    webkitallowfullscreen
+    mozallowfullscreen
+    allowfullscreen
+    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+  </iframe>
+</div>
+
+<p align="center"><em style="font-size: 0.9em; color: #9ca3af;">(Press play for a 3-minute technical walkthrough of the architecture and code.)</em></p>
+
+<hr />
+<h2 id="architecture">Architecture</h2>
+<p>The ecosystem relies on an event-driven, decoupled architecture.</p>
+<pre class="mermaid"><code>graph TD
+    %% Styling Definitions
+    classDef client fill:#1f2937,stroke:#4ade80,stroke-width:2px,color:#f3f4f6
+    classDef engine fill:#1e40af,stroke:#60a5fa,stroke-width:2px,color:#eff6ff
+    classDef redis fill:#991b1b,stroke:#f87171,stroke-width:2px,color:#fef2f2
+    classDef python fill:#065f46,stroke:#34d399,stroke-width:2px,color:#ecfdf5
+
+    %% Nodes
+    Client["💻 Client Browser&lt;br/&gt;(React / Vanilla JS)"]:::client
+    Engine["⚙️ Bidding Engine&lt;br/&gt;(Java Spring WebFlux)"]:::engine
+    Redis[("🗄️ Redis Cache&lt;br/&gt;(State / Lua / PubSub)")]:::redis
+    Sentinel["🧠 Sentinel ML&lt;br/&gt;(Python CatBoost)"]:::python
+
+    %% Connections
+    Client -- "1. HTTP POST (Execute Bid)" --&gt; Engine
+    Engine -- "2. Evaluate Atomic Lua Script" --&gt; Redis
+    Engine -. "3. Async Micro-batch (WebClient)" .-&gt; Sentinel
+    Redis -- "4. Pub/Sub (State Change Notification)" --&gt; Engine
+    Engine -- "5. Server-Sent Events (Live Logs &amp; Prices)" --&gt; Client
+    Sentinel -. "6. Fraud Alert (Redis Stream)" .-&gt; Redis</code></pre>
+<h2 id="key-features">Key Features</h2>
+<h3 id="1-ddos-mitigation-at-the-cache-layer">1. DDoS Mitigation at the Cache Layer</h3>
+<p>To protect the main Java JVM from wasting CPU cycles on dead or malicious traffic, the perimeter is secured by a custom token bucket rate limiter.</p>
+<div class="gif-block">
+  <img src="exports/Rate_Limiter_Public_01.gif" alt="Rate Limiter Demo">
+  <p class="gif-caption">
+    Redis-backed Token Bucket algorithm instantly evades a simulated 50-request DDoS attack.
+  </p>
+</div>
+
+<p>Every incoming request is evaluated in-memory within Redis. Malicious IPs attempting to flood the application are dropped instantly at the cache layer, maintaining stability for legitimate users.</p>
+<h3 id="2-atomic-transactions-and-race-condition-prevention">2. Atomic Transactions and Race Condition Prevention</h3>
+<p>In a highly concurrent system, two users bidding at the exact same millisecond can cause a double-spend or "time of check to time of use" (TOCTOU) vulnerability.
+To solve this, the Java server does not evaluate the math. Instead, it delegates the bid to an atomic Redis Lua script. This guarantees strict consistency and optimistic locking.</p>
+<div class="gif-block">
+  <img src="exports/Bid_Collision_Final.gif" alt="Bid Collision Demo">
+  <p class="gif-caption">
+    An atomic Lua script safely resolves simultaneous bids, preventing race conditions and double-spends.
+  </p>
+</div>
+
+<pre class="mermaid"><code>sequenceDiagram
+    participant C as Client (User/Bot)
+    participant J as Java Service
+    participant R as Redis (Lua Script)
+
+    C-&gt;&gt;J: POST /bid&lt;br/&gt;($15.00, Expected Version: 4)
+    J-&gt;&gt;R: EVAL update_auction.lua
+    activate R
+    Note right of R: Transaction locked
+    Note right of R: 1. Check if expired (TIME)&lt;br/&gt;2. Verify current version == 4&lt;br/&gt;3. Update price to $15.00&lt;br/&gt;4. Increment version to 5
+    R--&gt;&gt;J: Return success&lt;br/&gt;(New Version: 5)
+    deactivate R
+    J--&gt;&gt;C: 200 OK&lt;br/&gt;(Bid Accepted)</code></pre>
+<h3 id="3-non-blocking-io-and-real-time-data-streaming">3. Non-Blocking I/O and Real-Time Data Streaming</h3>
+<p>Built entirely on Spring WebFlux, the application uses a small pool of non-blocking event loop threads. When Redis commits a state change, it publishes a notification that Java pushes directly to the browser via Server-Sent Events (SSE).</p>
+<div class="gif-block">
+  <img src="exports/Log_Waterfall_Final.gif" alt="Log Waterfall Demo">
+  <p class="gif-caption">
+    Server-Sent Events stream hundreds of logs per second without choking the browser's render thread.
+  </p>
+</div>
+
+<p>To prevent the browser's rendering engine from choking on hundreds of log lines per second, the frontend leverages a detached <code>DocumentFragment</code> to batch DOM mutations in memory before repainting the screen, keeping the framerate smooth.</p>
+<div class="gif-block">
+  <img src="exports/Telemetry_Public_01.gif" alt="Real-time System Telemetry">
+  <p class="gif-caption">
+    Live Throughput (TPS) and P99 Latency metrics reacting instantly to the distributed bot swarm.
+  </p>
+</div>
+
+<p>The backend utilizes Spring Boot's Micrometer registry to aggregate high-frequency requests into rolling windows. 
+The frontend then processes this time-series data using a lightweight rendering cycle.</p>
+<h3 id="4-decoupled-ai-fraud-detection">4. Decoupled AI Fraud Detection</h3>
+<p>Running heavy machine learning models on the main server thread destroys P99 latency. Therefore, fraud detection is entirely decoupled.</p>
+<p>A separate Sentinel microservice collects live bids in micro-batches and sends them to a Python CatBoost model. If a bot is detected, an alert is pushed to a Redis Stream. The Java engine reads the stream, reverts the bad bid to the correct price, and bans the user asynchronously without interrupting the flow of ongoing auctions.</p>
+<h2 id="live-telemetry-monitoring">Live Telemetry &amp; Monitoring</h2>
+<p>Bidstream's performance and system health are tracked in real-time. You can view the live Grafana dashboard, which monitors throughput, P99 latency, and bot-rejection rates across the distributed system:</p>
+<ul>
+<li>📊 <strong><a href="https://metrics.bidstream.dev">Live Grafana Dashboard</a></strong></li>
+</ul>
+<h2 id="api-documentation">API Documentation</h2>
+<p>The backend services auto-generate OpenAPI (Swagger) documentation. You can explore the live production endpoints, request payloads, and schema definitions interactively:</p>
+<ul>
+<li>📖 <strong>Link available upon request</strong> </li>
+</ul>
+<h2 id="quick-start">Quick Start</h2>
+<p>The fastest way to run the entire distributed system locally is via Docker Compose.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Clone the repository</span>
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/walker-systems/auction-system.git
+<span class="nb">cd</span><span class="w"> </span>auction-system
+
+<span class="c1"># 2. Start the infrastructure</span>
+docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+
+<span class="c1"># 3. Access the dashboard</span>
+<span class="c1"># Open your browser and navigate to: http://localhost:8080</span>
+</code></pre></div>
+<h2 id="local-development-setup">Local Development Setup</h2>
+<p>If you wish to run the microservices independently for development:</p>
+<h3 id="1-start-redis">1. Start Redis</h3>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>-p<span class="w"> </span><span class="m">6379</span>:6379<span class="w"> </span>--name<span class="w"> </span>bidstream-redis<span class="w"> </span>redis:7.2-alpine
+</code></pre></div>
+<h3 id="2-start-the-machine-learning-api-python">2. Start the Machine Learning API (Python)</h3>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>sentinel-ml
+python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+<span class="nb">source</span><span class="w"> </span>.venv/bin/activate
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+uvicorn<span class="w"> </span>main:app<span class="w"> </span>--port<span class="w"> </span><span class="m">8000</span>
+</code></pre></div>
+<h3 id="3-start-the-java-services">3. Start the Java Services</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Terminal 1: Bidding Engine</span>
+<span class="nb">cd</span><span class="w"> </span>bidding-engine
+./mvnw<span class="w"> </span>spring-boot:run
+
+<span class="c1"># Terminal 2: Sentinel Service</span>
+<span class="nb">cd</span><span class="w"> </span>sentinel-service
+./mvnw<span class="w"> </span>spring-boot:run
+</code></pre></div>
+<hr />
+<p><strong>Created by <a href="https://walker-systems.github.io/">Justin Walker</a></strong></p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+  
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "toc.integrate", "toc.follow"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="javascripts/extra.js"></script>
+      
+    
+  </body>
+</html>
